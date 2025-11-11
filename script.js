@@ -33,6 +33,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- HELPER FUNCTIONS ---
 
     const formatEngineeringNotation = (value, precision = 3) => {
+        if (isNaN(value)) {
+            return { value: 'NaN', exponent: 0 };
+        }
+        if (!isFinite(value)) {
+            return { value: value > 0 ? 'Infinity' : '-Infinity', exponent: 0 };
+        }
         if (value === 0) return { value: '0', exponent: 0 };
         if (Math.abs(value) < 1e-12) return { value: '0', exponent: 0 };
 
