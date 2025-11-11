@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stiffness Matrix Generator</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Stiffness Matrix Generator</h1>
+        <div class="input-section">
+                    <div class="input-group">
+                        <label for="global-multiplier">Global Multiplier:</label>
+                        <input type="number" id="global-multiplier" value="1" step="any">
+                    </div>
+                    <div class="input-group">
+                        <label for="decimal-places">Decimal Places:</label>
+                        <input type="number" id="decimal-places" value="4" min="0" max="10">
+                    </div>
+                </div>
+
+                <div class="input-group-row">
+                    <div class="input-group">
+                        <label for="num-nodes">Number of Nodes:</label>
+                        <input type="number" id="num-nodes" value="2" min="2" max="10">
+                    </div>
+            <div id="boundary-conditions-section">
+                <h2>Boundary Conditions (Fixed Nodes)</h2>
+                <div id="fixed-nodes-container"></div>
+            </div>
+            <hr>
+            <h2>Elements</h2>
+            <div id="elements-container">
+                <!-- Element inputs will be added here dynamically -->
+            </div>
+            <div id="forces-section">
+                <h2>Applied Forces (F)</h2>
+                <div id="forces-container"></div>
+            </div>
+        </div>
+        <div class="action-section">
+            <button id="generate-matrix-btn">Generate Stiffness Matrix</button>
+            <button id="invert-matrix-btn">Invert Matrix</button>
+            <button id="calculate-displacements-btn">Calculate Displacements</button>
+            <button id="calculate-stresses-btn">Calculate Stresses</button>
+            <button id="load-5-node-chain-example-btn">Load 5-Node Chain Example</button>
+            <button id="load-series-example-btn">Load Series Example</button>
+            <button id="clear-app-btn">Clear</button>
+        </div>
+        <div id="matrix-output" class="matrix-output-section">
+            <h2 class="output-title"><span id="k-title">Global Stiffness Matrix (K)</span> <button id="export-k-latex" class="export-btn" title="Export to LaTeX">TeX</button></h2>
+            <div class="matrix-display-container">
+                <div class="matrix-multiplier" id="global-matrix-multiplier"></div>
+                <div id="matrix-container"></div>
+            </div>
+        </div>
+        <div id="inverse-matrix-output" class="matrix-output-section">
+            <h2 class="output-title"><span id="inv-k-title">Inverse of Reduced Matrix (K_r⁻¹)</span> <button id="export-inv-k-latex" class="export-btn" title="Export to LaTeX">TeX</button></h2>
+            <div class="matrix-display-container">
+                <div class="matrix-multiplier" id="inverse-matrix-multiplier"></div>
+                <div id="inverse-matrix-container"></div>
+            </div>
+        </div>
+            <div class="output-container">
+                <h3 class="output-title">Displacements (d)</h3>
+                <div id="displacements-container" class="results-box"></div>
+            </div>
+
+            <div class="output-container">
+                <h3 class="output-title">Reaction Forces (R)</h3>
+                <div id="reaction-forces-container" class="results-box"></div>
+            </div>
+
+            <div class="output-container">
+                <h3 class="output-title">Elemental Stresses (σ)</h3>
+                <div id="stresses-container" class="results-box"></div>
+            </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
