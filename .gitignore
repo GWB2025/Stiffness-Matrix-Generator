@@ -1,0 +1,8 @@
+# Exclude all PNG files by default
+*.png
+
+# Re-include the specific PNG file used in the app
+!2_3_example.png
+
+# Exclude all PDF files
+*.pdf

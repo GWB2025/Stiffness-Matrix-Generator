@@ -10,8 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const invertMatrixBtn = document.getElementById('invert-matrix-btn');
     const calculateDisplacementsBtn = document.getElementById('calculate-displacements-btn');
     const calculateStressesBtn = document.getElementById('calculate-stresses-btn');
-    const load5NodeChainExampleBtn = document.getElementById('load-5-node-chain-example-btn');
-    const loadSeriesExampleBtn = document.getElementById('load-series-example-btn');
+    const addElementBtn = document.getElementById('add-element-btn');
+    const loadExample1Btn = document.getElementById('load-example-1-btn');
+    const loadExample2Btn = document.getElementById('load-example-2-btn');
+    const loadExample3Btn = document.getElementById('load-example-3-btn');
     const clearAppBtn = document.getElementById('clear-app-btn');
     const matrixContainer = document.getElementById('matrix-container');
     const inverseMatrixContainer = document.getElementById('inverse-matrix-container');
@@ -21,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const globalMatrixMultiplier = document.getElementById('global-matrix-multiplier');
     const inverseMatrixMultiplier = document.getElementById('inverse-matrix-multiplier');
     const inputSection = document.querySelector('.input-section');
+    const modal = document.getElementById('example-modal');
+    const modalCloseBtn = document.querySelector('.modal-close-btn');
 
     let elementCount = 0;
     let globalStiffnessMatrix = []; // Unscaled
@@ -139,6 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const saveState = () => {
         const elements = Array.from(elementsContainer.querySelectorAll('.element-row')).map(row => ({
+            node1: row.querySelector('.node1').value,
+            node2: row.querySelector('.node2').value,
             stiffness: row.querySelector('.stiffness-input').value,
             area: row.querySelector('.area-input').value
         }));
@@ -159,7 +165,21 @@ document.addEventListener('DOMContentLoaded', () => {
             numNodesInput.value = state.numNodes || 2;
             globalMultiplierInput.value = state.globalMultiplier || 1;
             decimalPlacesInput.value = state.decimalPlaces || 4;
-            generateChainElements(parseInt(numNodesInput.value), state.elements, state.fixedNodes, state.forces);
+
+            // Clear existing elements before loading
+            elementsContainer.innerHTML = '';
+            if (state.elements && state.elements.length > 0) {
+                state.elements.forEach(el => {
+                    addElementRow(el.node1, el.node2, el.stiffness, el.area);
+                });
+            } else {
+                // If no elements saved, add a default one for a fresh start
+                addElementRow();
+            }
+
+            generateBoundaryConditionsUI(parseInt(numNodesInput.value), state.fixedNodes);
+            generateForcesUI(parseInt(numNodesInput.value), state.forces);
+
         } catch (error) {
             console.error("Failed to load saved state, resetting to default.", error);
             localStorage.removeItem('stiffnessMatrixState');
@@ -171,7 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
         numNodesInput.value = 2;
         globalMultiplierInput.value = 1;
         decimalPlacesInput.value = 4;
-        generateChainElements(2, [], [true, false], []);
+        elementsContainer.innerHTML = ''; // Clear all elements
+        generateBoundaryConditionsUI(2);
+        generateForcesUI(2);
         matrixContainer.innerHTML = '';
         inverseMatrixContainer.innerHTML = '';
         displacementsContainer.innerHTML = '';
@@ -208,26 +230,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const generateChainElements = (numNodes, savedElements = [], fixedStates = [], forceValues = []) => {
-        elementsContainer.innerHTML = '';
-        elementCount = 0;
-        generateBoundaryConditionsUI(numNodes, fixedStates);
-        generateForcesUI(numNodes, forceValues);
-        if (isNaN(numNodes) || numNodes < 2) return;
-        for (let i = 1; i < numNodes; i++) {
-            const stiffnessValue = (savedElements && savedElements[i - 1] && savedElements[i-1].stiffness) ? savedElements[i - 1].stiffness : 1;
-            const areaValue = (savedElements && savedElements[i - 1] && savedElements[i-1].area) ? savedElements[i - 1].area : 1;
-            addElementRow(i, i + 1, stiffnessValue, areaValue);
-        }
-    };
 
-    const addElementRow = (node1, node2, stiffness, area) => {
+
+    const addElementRow = (node1 = 1, node2 = 2, stiffness = 1, area = 1) => {
         elementCount++;
         const elementRow = document.createElement('div');
         elementRow.classList.add('element-row');
         elementRow.setAttribute('id', `element-${elementCount}`);
-        elementRow.innerHTML = `<div class="element-input-group"><label>Node 1</label><input type="number" class="node-input" value="${node1}" readonly></div><div class="element-input-group"><label>Node 2</label><input type="number" class="node-input" value="${node2}" readonly></div><div class="element-input-group"><label for="stiffness-${elementCount}">Stiffness (k)</label><input type="number" id="stiffness-${elementCount}" class="stiffness-input" value="${stiffness}" step="any"></div><div class="element-input-group"><label for="area-${elementCount}">Area (A)</label><input type="number" id="area-${elementCount}" class="area-input" value="${area}" step="any"></div>`;
+        elementRow.innerHTML = `
+            <div class="element-input-group">
+                <label for="node1-${elementCount}">Node 1</label>
+                <input type="number" id="node1-${elementCount}" class="node-input node1" value="${node1}" min="1" max="${parseInt(numNodesInput.value)}">
+            </div>
+            <div class="element-input-group">
+                <label for="node2-${elementCount}">Node 2</label>
+                <input type="number" id="node2-${elementCount}" class="node-input node2" value="${node2}" min="1" max="${parseInt(numNodesInput.value)}">
+            </div>
+            <div class="element-input-group">
+                <label for="stiffness-${elementCount}">Stiffness (k)</label>
+                <input type="number" id="stiffness-${elementCount}" class="stiffness-input" value="${stiffness}" step="any">
+            </div>
+            <div class="element-input-group">
+                <label for="area-${elementCount}">Area (A)</label>
+                <input type="number" id="area-${elementCount}" class="area-input" value="${area}" step="any">
+            </div>
+            <button type="button" class="remove-element-btn">Remove</button>
+        `;
         elementsContainer.appendChild(elementRow);
+
+        elementRow.querySelector('.remove-element-btn').addEventListener('click', () => {
+            elementRow.remove();
+            saveState();
+        });
+
+        // Add event listeners for node inputs to update max attribute
+        const updateNodeMax = () => {
+            const maxNode = parseInt(numNodesInput.value);
+            elementRow.querySelector('.node1').setAttribute('max', maxNode);
+            elementRow.querySelector('.node2').setAttribute('max', maxNode);
+        };
+        numNodesInput.addEventListener('change', updateNodeMax);
+        updateNodeMax(); // Initial call
+
         return elementRow;
     };
 
@@ -237,19 +281,27 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Please enter a valid number of nodes (between 2 and 10).');
             return false;
         }
-        const K = Array(numNodes).fill(0).map(() => Array(numNodes).fill(0));
+        const K = Array(numNodes).fill(0).map(() => Array(numNodes).fill(0).map(() => 0));
         const elementRows = elementsContainer.querySelectorAll('.element-row');
         let isValid = true;
         elementRows.forEach(row => {
             const stiffness = parseFloat(row.querySelector('.stiffness-input').value);
+            const nodeId1 = parseInt(row.querySelector('.node1').value);
+            const nodeId2 = parseInt(row.querySelector('.node2').value);
+
             if (isNaN(stiffness) || stiffness <= 0) {
                 if (isValid) alert('Invalid input for an element. Stiffness must be a positive number.');
                 isValid = false;
                 return;
             }
-            const nodeId1 = parseInt(row.querySelectorAll('.node-input')[0].value);
-            const nodeId2 = parseInt(row.querySelectorAll('.node-input')[1].value);
-            const i = nodeId1 - 1, j = nodeId2 - 1;
+            if (isNaN(nodeId1) || isNaN(nodeId2) || nodeId1 < 1 || nodeId2 < 1 || nodeId1 > numNodes || nodeId2 > numNodes || nodeId1 === nodeId2) {
+                if (isValid) alert(`Invalid node IDs for an element. Nodes must be between 1 and ${numNodes} and different.`);
+                isValid = false;
+                return;
+            }
+
+            const i = nodeId1 - 1;
+            const j = nodeId2 - 1;
             K[i][i] += stiffness;
             K[j][j] += stiffness;
             K[i][j] -= stiffness;
@@ -364,7 +416,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- EVENT LISTENERS ---
 
     numNodesInput.addEventListener('change', () => {
-        generateChainElements(parseInt(numNodesInput.value));
+        const numNodes = parseInt(numNodesInput.value);
+        generateBoundaryConditionsUI(numNodes);
+        generateForcesUI(numNodes);
+        saveState();
+    });
+
+    addElementBtn.addEventListener('click', () => {
+        addElementRow();
         saveState();
     });
 
@@ -448,42 +507,68 @@ document.addEventListener('DOMContentLoaded', () => {
         reactionForcesContainer.innerHTML = reactionTableHTML;
     });
 
-    load5NodeChainExampleBtn.addEventListener('click', () => {
+    loadExample1Btn.addEventListener('click', () => {
         numNodesInput.value = 5;
         globalMultiplierInput.value = 1e8; // Set multiplier to 10^8 as per reaction.png example
         decimalPlacesInput.value = 4;
 
-        const exampleElements = [
-            { stiffness: 0.3333, area: 1e-4 },
-            { stiffness: 1, area: 1e-4 },
-            { stiffness: 1, area: 1e-4 },
-            { stiffness: 0.3333, area: 1e-4 }
-        ];
-        const exampleFixed = [true, false, false, false, true]; // Fixed nodes 1 and 5
-        const exampleForces = [0, 0, 10000, 0, 0]; // Force at node 3
+        elementsContainer.innerHTML = ''; // Clear existing elements
+        addElementRow(1, 2, 0.3333, 1e-4);
+        addElementRow(2, 3, 1, 1e-4);
+        addElementRow(3, 4, 1, 1e-4);
+        addElementRow(4, 5, 0.3333, 1e-4);
 
-        generateChainElements(5, exampleElements, exampleFixed, exampleForces);
+        generateBoundaryConditionsUI(5, [true, false, false, false, true]); // Fixed nodes 1 and 5
+        generateForcesUI(5, [0, 0, 10000, 0, 0]); // Force at node 3
+
         generateAndDisplayMatrix(); // Generate and display the matrix from the elements
         saveState();
     });
 
-    loadSeriesExampleBtn.addEventListener('click', () => {
+    loadExample2Btn.addEventListener('click', () => {
         numNodesInput.value = 5;
         globalMultiplierInput.value = 1; // No specific multiplier given, use 1
         decimalPlacesInput.value = 4;
 
-        const exampleElements = [
-            { stiffness: 1, area: 1e-4 }, // Assuming k1=1
-            { stiffness: 1, area: 1e-4 }, // Assuming k2=1
-            { stiffness: 1, area: 1e-4 }, // Assuming k3=1
-            { stiffness: 1, area: 1e-4 }  // Assuming k4=1
-        ];
-        const exampleFixed = [true, false, false, false, false]; // Fixed node 1
-        const exampleForces = [0, 0, 0, 0, 10000]; // Force P at node 5, assuming P=10000
+        elementsContainer.innerHTML = ''; // Clear existing elements
+        addElementRow(1, 2, 1, 1e-4); // Assuming k1=1
+        addElementRow(2, 3, 1, 1e-4); // Assuming k2=1
+        addElementRow(3, 4, 1, 1e-4); // Assuming k3=1
+        addElementRow(4, 5, 1, 1e-4); // Assuming k4=1
 
-        generateChainElements(5, exampleElements, exampleFixed, exampleForces);
+        generateBoundaryConditionsUI(5, [true, false, false, false, false]); // Fixed node 1
+        generateForcesUI(5, [0, 0, 0, 0, 10000]); // Force P at node 5, assuming P=10000
+
         generateAndDisplayMatrix();
         saveState();
+    });
+
+    loadExample3Btn.addEventListener('click', () => {
+        numNodesInput.value = 5;
+        globalMultiplierInput.value = 1;
+        decimalPlacesInput.value = 4;
+
+        elementsContainer.innerHTML = ''; // Clear existing elements
+        addElementRow(1, 2, 1.5, 1);
+        addElementRow(2, 3, 1.5, 1);
+        addElementRow(2, 3, 2, 1); // Parallel element
+        addElementRow(2, 4, 5, 1);
+        addElementRow(4, 5, 5, 1);
+        addElementRow(3, 4, 2.5, 1);
+
+        generateBoundaryConditionsUI(5, [true, false, false, false, true]); // Fixed nodes 1 and 5
+        generateForcesUI(5, [0, 100, 0, 100, 0]); // F2=100, F4=100
+
+        generateAndDisplayMatrix();
+        saveState();
+        
+        // Reset modal position to center before showing
+        const modalContent = document.querySelector('.modal-content');
+        if (modalContent.resetDragPosition) {
+            modalContent.resetDragPosition();
+        }
+        
+        modal.style.display = 'flex'; // Show the modal
     });
 
     clearAppBtn.addEventListener('click', () => resetAppToDefault(true));
@@ -577,6 +662,65 @@ document.addEventListener('DOMContentLoaded', () => {
             stressesContainer.innerHTML = tableHTML;
         });
     }
+
+    // --- MODAL LOGIC ---
+    const modalContent = document.querySelector('.modal-content');
+
+    const makeDraggable = (element) => {
+        let isDragging = false;
+        let currentX = 0, currentY = 0; // These will store the accumulated drag offset
+        let initialMouseX, initialMouseY;
+
+        element.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('modal-close-btn')) return;
+
+            isDragging = true;
+            initialMouseX = e.clientX;
+            initialMouseY = e.clientY;
+
+            element.style.cursor = 'grabbing';
+
+            document.addEventListener('mousemove', mouseMove);
+            document.addEventListener('mouseup', mouseUp);
+        });
+
+        function mouseMove(e) {
+            if (isDragging) {
+                e.preventDefault(); // Prevent text selection etc.
+
+                let dx = e.clientX - initialMouseX;
+                let dy = e.clientY - initialMouseY;
+
+                currentX += dx;
+                currentY += dy;
+
+                element.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
+
+                initialMouseX = e.clientX;
+                initialMouseY = e.clientY;
+            }
+        }
+
+        function mouseUp() {
+            isDragging = false;
+            document.removeEventListener('mousemove', mouseMove);
+            document.removeEventListener('mouseup', mouseUp);
+            element.style.cursor = 'move';
+        }
+
+        // Function to reset the drag offset (called when modal is opened)
+        element.resetDragPosition = () => {
+            currentX = 0;
+            currentY = 0;
+            element.style.transform = 'translate(-50%, -50%)';
+        };
+    };
+
+    makeDraggable(modalContent);
+
+    modalCloseBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
 
     // --- INITIALIZATION ---
     loadState();

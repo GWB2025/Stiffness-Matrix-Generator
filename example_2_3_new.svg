@@ -1,0 +1,92 @@
+<svg width="450" height="250" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+    <style>
+        .node-circle { fill: none; stroke: orange; stroke-width: 2; }
+        .node-label { fill: orange; font-size: 16px; font-weight: bold; text-anchor: middle; dominant-baseline: central; }
+        .spring-label { fill: blue; font-size: 14px; text-anchor: middle; }
+        .force-arrow { stroke: magenta; stroke-width: 2; marker-end: url(#arrowhead-magenta); }
+        .force-label { fill: blue; font-size: 16px; font-weight: bold; }
+        .support-line { stroke: black; stroke-width: 3; }
+        .support-hatch { stroke: #888; stroke-width: 1; }
+        .connection-line { stroke: black; stroke-width: 1; }
+    </style>
+    <defs>
+        <marker id="arrowhead-magenta" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="magenta" />
+        </marker>
+    </defs>
+
+    <!-- Nodes -->
+    <g id="nodes">
+        <circle cx="50" cy="100" r="15" class="node-circle"/>
+        <text x="50" y="100" class="node-label">1</text>
+
+        <circle cx="150" cy="100" r="15" class="node-circle"/>
+        <text x="150" y="100" class="node-label">2</text>
+
+        <circle cx="250" cy="100" r="15" class="node-circle"/>
+        <text x="250" y="100" class="node-label">3</text>
+
+        <circle cx="250" cy="180" r="15" class="node-circle"/>
+        <text x="250" y="180" class="node-label">4</text>
+
+        <circle cx="350" cy="100" r="15" class="node-circle"/>
+        <text x="350" y="100" class="node-label">5</text>
+    </g>
+
+    <!-- Spring Labels and Connections -->
+    <g id="springs">
+        <!-- k1 (1-2) -->
+        <line x1="65" y1="100" x2="135" y2="100" class="connection-line"/>
+        <text x="100" y="80" class="spring-label">k₁</text>
+
+        <!-- k2 (2-3) -->
+        <line x1="165" y1="100" x2="235" y2="100" class="connection-line"/>
+        <text x="200" y="80" class="spring-label">k₂</text>
+
+        <!-- k3 (2-3, parallel) -->
+        <path d="M 150 100 C 180 130, 220 130, 250 100" fill="none" stroke="black" stroke-dasharray="5,5"/>
+        <text x="200" y="130" class="spring-label">k₃</text>
+
+        <!-- k4 (2-4) -->
+        <line x1="150" y1="115" x2="150" y2="165" class="connection-line"/>
+        <text x="130" y="140" class="spring-label">k₄</text>
+
+        <!-- k5 (3-4) -->
+        <line x1="250" y1="115" x2="250" y2="165" class="connection-line"/>
+        <text x="270" y="140" class="spring-label">k₅</text>
+
+        <!-- k6 (4-5) -->
+        <line x1="265" y1="180" x2="335" y2="180" class="connection-line"/>
+        <text x="300" y="160" class="spring-label">k₆</text>
+    </g>
+
+    <!-- Forces -->
+    <g id="forces">
+        <line x1="150" y1="100" x2="190" y2="100" class="force-arrow"/>
+        <text x="195" y="95" class="force-label">F₂</text>
+
+        <line x1="250" y1="180" x2="290" y2="180" class="force-arrow"/>
+        <text x="295" y="175" class="force-label">F₄</text>
+    </g>
+
+    <!-- Supports -->
+    <g id="supports">
+        <!-- Support at Node 1 -->
+        <line x1="30" y1="75" x2="30" y2="125" class="support-line"/>
+        <line x1="20" y1="80" x2="30" y2="75" class="support-hatch"/>
+        <line x1="20" y1="90" x2="30" y2="85" class="support-hatch"/>
+        <line x1="20" y1="100" x2="30" y2="95" class="support-hatch"/>
+        <line x1="20" y1="110" x2="30" y2="105" class="support-hatch"/>
+        <line x1="20" y1="120" x2="30" y2="115" class="support-hatch"/>
+        <line x1="35" y1="100" x2="30" y2="100" class="connection-line"/>
+
+        <!-- Support at Node 5 -->
+        <line x1="370" y1="75" x2="370" y2="125" class="support-line"/>
+        <line x1="380" y1="80" x2="370" y2="75" class="support-hatch"/>
+        <line x1="380" y1="90" x2="370" y2="85" class="support-hatch"/>
+        <line x1="380" y1="100" x2="370" y2="95" class="support-hatch"/>
+        <line x1="380" y1="110" x2="370" y2="105" class="support-hatch"/>
+        <line x1="380" y1="120" x2="370" y2="115" class="support-hatch"/>
+        <line x1="365" y1="100" x2="370" y2="100" class="connection-line"/>
+    </g>
+</svg>
