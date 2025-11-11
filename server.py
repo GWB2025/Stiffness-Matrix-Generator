@@ -5,7 +5,7 @@ import os
 
 # Define the server address
 HOST = "127.0.0.1"
-PORT = 5000
+PORT = 5001
 
 # Check if certificate files exist
 if not os.path.exists('cert.pem') or not os.path.exists('key.pem'):

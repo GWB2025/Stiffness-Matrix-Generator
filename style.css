@@ -92,6 +92,19 @@ hr {
     margin: 20px 0;
 }
 
+.elements-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px; /* Add some space below the header */
+}
+
+.elements-header h2 {
+    margin-bottom: 0; /* Remove default margin from h2 */
+    border-bottom: none; /* Remove the border from the h2 inside this header */
+    margin-top: 0; /* Remove default margin from h2 */
+}
+
 .element-row {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr auto;

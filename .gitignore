@@ -9,3 +9,5 @@
 
 # Exclude all pem files
 *.pem
+
+__pycache__/
