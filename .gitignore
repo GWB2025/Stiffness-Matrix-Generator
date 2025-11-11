@@ -6,3 +6,6 @@
 
 # Exclude all PDF files
 *.pdf
+
+# Exclude all pem files
+*.pem
