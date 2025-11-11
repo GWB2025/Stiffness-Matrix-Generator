@@ -7,8 +7,13 @@
 # Exclude all PDF files
 *.pdf
 
+# Exclude all doc files
+**/doc/*.pdf
+
 # Exclude all pem files
 *.pem
 
 __pycache__/
 example_2_3.svg
+.gitignore.swp
+
