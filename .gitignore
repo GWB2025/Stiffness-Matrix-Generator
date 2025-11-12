@@ -3,6 +3,7 @@
 
 # Re-include the specific PNG file used in the app
 !2_3_example.png
+!screenshot.png
 
 # Exclude all PDF files
 *.pdf
@@ -17,4 +18,3 @@ __pycache__/
 example_2_3.svg
 example_2_3_new.svg
 .gitignore.swp
-
