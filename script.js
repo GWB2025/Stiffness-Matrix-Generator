@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const calculateStressesBtn = document.getElementById('calculate-stresses-btn');
     const addElementBtn = document.getElementById('add-element-btn');
     const loadExample1Btn = document.getElementById('load-example-1-btn');
-    const loadExample2Btn = document.getElementById('load-example-2-btn');
     const loadExample3Btn = document.getElementById('load-example-3-btn');
     const clearAppBtn = document.getElementById('clear-app-btn');
     const matrixContainer = document.getElementById('matrix-container');
@@ -540,24 +539,6 @@ document.addEventListener('DOMContentLoaded', () => {
             modalContent.resetDragPosition();
         }
         modal.style.display = 'flex'; // Show the modal
-    });
-
-    loadExample2Btn.addEventListener('click', () => {
-        numNodesInput.value = 5;
-        globalMultiplierInput.value = 1; // No specific multiplier given, use 1
-        decimalPlacesInput.value = 4;
-
-        elementsContainer.innerHTML = ''; // Clear existing elements
-        addElementRow(1, 2, 1, 1e-4); // Assuming k1=1
-        addElementRow(2, 3, 1, 1e-4); // Assuming k2=1
-        addElementRow(3, 4, 1, 1e-4); // Assuming k3=1
-        addElementRow(4, 5, 1, 1e-4); // Assuming k4=1
-
-        generateBoundaryConditionsUI(5, [true, false, false, false, false]); // Fixed node 1
-        generateForcesUI(5, [0, 0, 0, 0, 10000]); // Force P at node 5, assuming P=10000
-
-        generateAndDisplayMatrix();
-        saveState();
     });
 
     loadExample3Btn.addEventListener('click', () => {
