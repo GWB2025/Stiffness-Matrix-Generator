@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputSection = document.querySelector('.input-section');
     const modal = document.getElementById('example-modal');
     const modalCloseBtn = document.querySelector('.modal-close-btn');
+    const modalImg = document.getElementById('modal-img');
 
     let elementCount = 0;
     let globalStiffnessMatrix = []; // Unscaled
@@ -529,6 +530,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         generateAndDisplayMatrix(); // Generate and display the matrix from the elements
         saveState();
+
+        // Show modal with example 2.2 image
+        modalImg.src = 'images/2_2_example.png';
+        modalImg.alt = 'Example 2.2 Diagram';
+        // Reset modal position to center before showing
+        const modalContent = document.querySelector('.modal-content');
+        if (modalContent.resetDragPosition) {
+            modalContent.resetDragPosition();
+        }
+        modal.style.display = 'flex'; // Show the modal
     });
 
     loadExample2Btn.addEventListener('click', () => {
@@ -568,6 +579,9 @@ document.addEventListener('DOMContentLoaded', () => {
         generateAndDisplayMatrix();
         saveState();
         
+        // Show modal with example 2.3 image
+        modalImg.src = 'images/2_3_example.png';
+        modalImg.alt = 'Example 2.3 Diagram';
         // Reset modal position to center before showing
         const modalContent = document.querySelector('.modal-content');
         if (modalContent.resetDragPosition) {
