@@ -4,6 +4,7 @@
 # Re-include the specific PNG file used in the app
 !2_3_example.png
 !screenshot.png
+!images/2_2_example.png
 
 # Exclude all PDF files
 *.pdf
