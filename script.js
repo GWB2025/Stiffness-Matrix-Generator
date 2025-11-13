@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addElementBtn = document.getElementById('add-element-btn');
     const loadExample1Btn = document.getElementById('load-example-1-btn');
     const loadExample3Btn = document.getElementById('load-example-3-btn');
+    const activity23Btn = document.getElementById('activity-2-3-btn');
     const clearAppBtn = document.getElementById('clear-app-btn');
     const matrixContainer = document.getElementById('matrix-container');
     const inverseMatrixContainer = document.getElementById('inverse-matrix-container');
@@ -25,9 +26,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('example-modal');
     const modalCloseBtn = document.querySelector('.modal-close-btn');
     const modalImg = document.getElementById('modal-img');
+    const showConstructionBtn = document.getElementById('show-construction-btn');
+    const constructionModal = document.getElementById('construction-modal');
+    const constructionStepsContainer = document.getElementById('construction-steps-container');
+    const constructionModalCloseBtn = constructionModal.querySelector('.modal-close-btn');
+
+    const showDiagramBtn = document.getElementById('show-diagram-btn');
+    const diagramModal = document.getElementById('diagram-modal');
+    const diagramContainer = document.getElementById('diagram-container');
+    const diagramModalCloseBtn = diagramModal.querySelector('.modal-close-btn');
+
+    const calculateElementForcesBtn = document.getElementById('calculate-element-forces-btn');
+    const elementForcesContainer = document.getElementById('element-forces-container');
 
     let elementCount = 0;
     let globalStiffnessMatrix = []; // Unscaled
+    let fullDisplacementVector = []; // To store nodal displacements
     let matrixForExport = { K: null, invK: null, kHeaders: null, invKHeaders: null, kMultiplierHtml: '', invKMultiplierHtml: '', kNumericMultiplier: 1, invKNumericMultiplier: 1 };
 
     // --- HELPER FUNCTIONS ---
@@ -149,6 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const saveState = () => {
         const elements = Array.from(elementsContainer.querySelectorAll('.element-row')).map(row => ({
+            label: row.querySelector('.element-label-input').value,
             node1: row.querySelector('.node1').value,
             node2: row.querySelector('.node2').value,
             stiffness: row.querySelector('.stiffness-input').value,
@@ -176,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elementsContainer.innerHTML = '';
             if (state.elements && state.elements.length > 0) {
                 state.elements.forEach(el => {
-                    addElementRow(el.node1, el.node2, el.stiffness, el.area);
+                    addElementRow(el.node1, el.node2, el.stiffness, el.area, el.label);
                 });
             } else {
                 // If no elements saved, add a default one for a fresh start
@@ -220,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isChecked = fixedStates[i - 1] || false;
             const item = document.createElement('div');
             item.classList.add('fixed-node-item');
-            item.innerHTML = `<input type="checkbox" id="fixed-node-${i}" ${isChecked ? 'checked' : ''}><label for="fixed-node-${i}">Node ${i}</label>`;
+            item.innerHTML = `<input type="checkbox" id="fixed-node-${i}" ${isChecked ? 'checked' : ''} title="Tick to fix this node, preventing any displacement."><label for="fixed-node-${i}">Node ${i}</label>`;
             fixedNodesContainer.appendChild(item);
         }
     };
@@ -231,36 +246,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const value = forceValues[i - 1] || 0;
             const item = document.createElement('div');
             item.classList.add('force-item');
-            item.innerHTML = `<label for="force-${i}">F<sub>${i}</sub>:</label><input type="number" id="force-${i}" value="${value}">`;
+            item.innerHTML = `<label for="force-${i}">F<sub>${i}</sub>:</label><input type="number" id="force-${i}" value="${value}" title="Enter the external force applied at this node.">`;
             forcesContainer.appendChild(item);
         }
     };
 
 
 
-    const addElementRow = (node1 = 1, node2 = 2, stiffness = 1, area = 1) => {
+    const addElementRow = (node1 = 1, node2 = 2, stiffness = 1, area = 1, label = '') => {
         elementCount++;
         const elementRow = document.createElement('div');
         elementRow.classList.add('element-row');
         elementRow.setAttribute('id', `element-${elementCount}`);
         elementRow.innerHTML = `
             <div class="element-input-group">
+                <label for="label-${elementCount}">Label</label>
+                <input type="text" id="label-${elementCount}" class="element-label-input" value="${label}" placeholder="Element Label (optional)" title="An optional label for the element (e.g., 'k1').">
+            </div>
+            <div class="element-input-group">
                 <label for="node1-${elementCount}">Node 1</label>
-                <input type="number" id="node1-${elementCount}" class="node-input node1" value="${node1}" min="1" max="${parseInt(numNodesInput.value)}">
+                <input type="number" id="node1-${elementCount}" class="node-input node1" value="${node1}" min="1" max="${parseInt(numNodesInput.value)}" title="The first node the element is connected to.">
             </div>
             <div class="element-input-group">
                 <label for="node2-${elementCount}">Node 2</label>
-                <input type="number" id="node2-${elementCount}" class="node-input node2" value="${node2}" min="1" max="${parseInt(numNodesInput.value)}">
+                <input type="number" id="node2-${elementCount}" class="node-input node2" value="${node2}" min="1" max="${parseInt(numNodesInput.value)}" title="The second node the element is connected to.">
             </div>
             <div class="element-input-group">
                 <label for="stiffness-${elementCount}">Stiffness (k)</label>
-                <input type="number" id="stiffness-${elementCount}" class="stiffness-input" value="${stiffness}" step="any">
+                <input type="number" id="stiffness-${elementCount}" class="stiffness-input" value="${stiffness}" step="any" title="The stiffness value of the element.">
             </div>
             <div class="element-input-group">
                 <label for="area-${elementCount}">Area (A)</label>
-                <input type="number" id="area-${elementCount}" class="area-input" value="${area}" step="any">
+                <input type="number" id="area-${elementCount}" class="area-input" value="${area}" step="any" title="The cross-sectional area, used for calculating stress.">
             </div>
-            <button type="button" class="remove-element-btn">Remove</button>
+            <button type="button" class="remove-element-btn" title="Remove this element from the system.">Remove</button>
         `;
         elementsContainer.appendChild(elementRow);
 
@@ -482,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
         const fixedNodesIndices = fixedNodes.map((isFixed, i) => (isFixed ? i : -1)).filter(i => i !== -1);
 
-        const fullDisplacementVector = Array(numNodes).fill(0);
+        fullDisplacementVector = Array(numNodes).fill(0);
         freeNodesIndices.forEach((nodeIndex, i) => {
             fullDisplacementVector[nodeIndex] = displacements[i];
         });
@@ -519,10 +538,10 @@ document.addEventListener('DOMContentLoaded', () => {
         decimalPlacesInput.value = 4;
 
         elementsContainer.innerHTML = ''; // Clear existing elements
-        addElementRow(1, 2, 0.3333, 1e-4);
-        addElementRow(2, 3, 1, 1e-4);
-        addElementRow(3, 4, 1, 1e-4);
-        addElementRow(4, 5, 0.3333, 1e-4);
+        addElementRow(1, 2, 0.3333, 1e-4, 'Element 1');
+        addElementRow(2, 3, 1, 1e-4, 'Element 2');
+        addElementRow(3, 4, 1, 1e-4, 'Element 3');
+        addElementRow(4, 5, 0.3333, 1e-4, 'Element 4');
 
         generateBoundaryConditionsUI(5, [true, false, false, false, true]); // Fixed nodes 1 and 5
         generateForcesUI(5, [0, 0, 10000, 0, 0]); // Force at node 3
@@ -547,12 +566,12 @@ document.addEventListener('DOMContentLoaded', () => {
         decimalPlacesInput.value = 4;
 
         elementsContainer.innerHTML = ''; // Clear existing elements
-        addElementRow(1, 2, 1.5, 1);
-        addElementRow(2, 3, 1.5, 1);
-        addElementRow(2, 3, 2, 1); // Parallel element
-        addElementRow(2, 4, 5, 1);
-        addElementRow(4, 5, 5, 1);
-        addElementRow(3, 4, 2.5, 1);
+        addElementRow(1, 2, 1.5, 1, 'Element 1');
+        addElementRow(2, 3, 1.5, 1, 'Element 2');
+        addElementRow(2, 3, 2, 1, 'Element 3 (Parallel)');
+        addElementRow(2, 4, 5, 1, 'Element 4');
+        addElementRow(4, 5, 5, 1, 'Element 5');
+        addElementRow(3, 4, 2.5, 1, 'Element 6');
 
         generateBoundaryConditionsUI(5, [true, false, false, false, true]); // Fixed nodes 1 and 5
         generateForcesUI(5, [0, 100, 0, 100, 0]); // F2=100, F4=100
@@ -572,12 +591,308 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.style.display = 'flex'; // Show the modal
     });
 
+    if (activity23Btn) {
+        activity23Btn.addEventListener('click', () => {
+            numNodesInput.value = 5;
+            globalMultiplierInput.value = 1;
+            decimalPlacesInput.value = 4;
+
+            elementsContainer.innerHTML = ''; // Clear existing elements
+            addElementRow(1, 2, 500, 1, 'k1');
+            addElementRow(2, 4, 400, 1, 'k2');
+            addElementRow(2, 3, 600, 1, 'k3');
+            addElementRow(1, 3, 200, 1, 'k4');
+            addElementRow(3, 4, 400, 1, 'k5');
+            addElementRow(4, 5, 300, 1, 'k6');
+
+            generateBoundaryConditionsUI(5, [true, false, false, false, true]); // Fixed nodes 1 and 5
+            generateForcesUI(5, [0, 0, -1000, 0, 0]); // F3=-1000
+
+            generateAndDisplayMatrix();
+            saveState();
+        });
+    }
+
     clearAppBtn.addEventListener('click', () => resetAppToDefault(true));
 
     inputSection.addEventListener('input', saveState);
     globalMultiplierInput.addEventListener('input', saveState);
     decimalPlacesInput.addEventListener('input', saveState);
 
+    const formatMatrixForDisplay = (matrix, highlightIndices = []) => {
+        const decimalPlaces = parseInt(decimalPlacesInput.value);
+        let tableHTML = '<table>';
+        tableHTML += '<thead><tr><th></th>' + matrix.map((_, i) => `<th>${i + 1}</th>`).join('') + '</tr></thead>';
+        tableHTML += '<tbody>';
+        matrix.forEach((row, i) => {
+            tableHTML += `<tr><th>${i + 1}</th>`;
+            row.forEach((val, j) => {
+                const isHighlighted = highlightIndices.some(p => p[0] === i && p[1] === j);
+                tableHTML += `<td ${isHighlighted ? 'style="background-color: #d4edda;"' : ''}>${val.toFixed(decimalPlaces)}</td>`;
+            });
+            tableHTML += '</tr>';
+        });
+        tableHTML += '</tbody></table>';
+        return tableHTML;
+    };
+
+    const showConstructionSteps = () => {
+        const numNodes = parseInt(numNodesInput.value);
+        if (isNaN(numNodes) || numNodes < 2 || numNodes > 10) {
+            alert('Please enter a valid number of nodes (between 2 and 10).');
+            return;
+        }
+
+        const elementRows = elementsContainer.querySelectorAll('.element-row');
+        if (elementRows.length === 0) {
+            alert('Please add at least one element.');
+            return;
+        }
+
+        let stepsHTML = '';
+        let K = Array(numNodes).fill(0).map(() => Array(numNodes).fill(0));
+
+        stepsHTML += '<h3>Initial Global Matrix (K)</h3>';
+        stepsHTML += formatMatrixForDisplay(K);
+        stepsHTML += '<hr>';
+
+        let isValid = true;
+        elementRows.forEach((row, index) => {
+            if (!isValid) return;
+
+            const stiffness = parseFloat(row.querySelector('.stiffness-input').value);
+            const nodeId1 = parseInt(row.querySelector('.node1').value);
+            const nodeId2 = parseInt(row.querySelector('.node2').value);
+
+            if (isNaN(stiffness) || stiffness <= 0 || isNaN(nodeId1) || isNaN(nodeId2) || nodeId1 < 1 || nodeId2 < 1 || nodeId1 > numNodes || nodeId2 > numNodes || nodeId1 === nodeId2) {
+                if (isValid) alert('Invalid input for one or more elements. Cannot show construction.');
+                isValid = false;
+                return;
+            }
+
+            stepsHTML += `<h3>Step ${index + 1}: Adding Element ${index + 1}</h3>`;
+            stepsHTML += `<p>Element connecting <b>Node ${nodeId1}</b> and <b>Node ${nodeId2}</b> with stiffness <b>k = ${stiffness}</b></p>`;
+
+            const i = nodeId1 - 1;
+            const j = nodeId2 - 1;
+
+            const elemK = [[stiffness, -stiffness], [-stiffness, stiffness]];
+            stepsHTML += '<h4>Element Stiffness Matrix</h4>';
+            stepsHTML += `<p>For nodes ${nodeId1} and ${nodeId2}:</p>`;
+            stepsHTML += formatMatrixForDisplay(elemK);
+
+
+            K[i][i] += stiffness;
+            K[j][j] += stiffness;
+            K[i][j] -= stiffness;
+            K[j][i] -= stiffness;
+
+            stepsHTML += '<h4>Updated Global Matrix (K)</h4>';
+            stepsHTML += '<p>The element stiffness values are added to the global matrix at positions corresponding to the nodes.</p>';
+            stepsHTML += formatMatrixForDisplay(K, [[i, i], [j, j], [i, j], [j, i]]);
+            stepsHTML += '<hr>';
+        });
+
+        if (isValid) {
+            constructionStepsContainer.innerHTML = stepsHTML;
+            constructionModal.style.display = 'flex';
+        }
+    };
+
+    showConstructionBtn.addEventListener('click', showConstructionSteps);
+
+    constructionModalCloseBtn.addEventListener('click', () => {
+        constructionModal.style.display = 'none';
+    });
+
+    const generateAndShowDiagram = () => {
+        const numNodes = parseInt(numNodesInput.value);
+        if (isNaN(numNodes) || numNodes < 2 || numNodes > 10) {
+            alert('Please enter a valid number of nodes (between 2 and 10).');
+            return;
+        }
+
+        const elements = Array.from(elementsContainer.querySelectorAll('.element-row')).map(row => ({
+            node1: parseInt(row.querySelector('.node1').value),
+            node2: parseInt(row.querySelector('.node2').value),
+            label: row.querySelector('.element-label-input').value,
+        }));
+
+        const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
+        const forces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
+
+        // --- 2D Layout Algorithm ---
+        const adj = Array.from({ length: numNodes + 1 }, () => []);
+        elements.forEach(el => {
+            if (!isNaN(el.node1) && !isNaN(el.node2) && el.node1 !== el.node2) {
+                adj[el.node1].push(el.node2);
+                adj[el.node2].push(el.node1);
+            }
+        });
+        const layers = [];
+        const visited = new Set();
+        for (let i = 1; i <= numNodes; i++) {
+            if (!visited.has(i)) {
+                const queue = [[i, 0]];
+                visited.add(i);
+                while (queue.length > 0) {
+                    const [u, layer] = queue.shift();
+                    if (!layers[layer]) layers[layer] = [];
+                    if (!layers[layer].includes(u)) {
+                        layers[layer].push(u);
+                    }
+                    adj[u].forEach(v => {
+                        if (!visited.has(v)) {
+                            visited.add(v);
+                            queue.push([v, layer + 1]);
+                        }
+                    });
+                }
+            }
+        }
+
+        const svgWidth = 700;
+        const svgHeight = 400;
+        const xPadding = 60;
+        const yPadding = 40;
+        const nodeRadius = 15;
+
+        const layerSpacing = layers.length > 1 ? (svgWidth - 2 * xPadding) / (layers.length - 1) : 0;
+        const nodePositions = {};
+
+        layers.forEach((layer, layerIndex) => {
+            const layerHeight = svgHeight - 2 * yPadding;
+            const numNodesInLayer = layer.length;
+            const nodeSpacingY = numNodesInLayer > 1 ? layerHeight / (numNodesInLayer - 1) : layerHeight / 2;
+            
+            layer.sort((a, b) => a - b); // Sort nodes for consistent layout
+
+            layer.forEach((node, nodeIndexInLayer) => {
+                const x = xPadding + layerIndex * layerSpacing;
+                const y = yPadding + (numNodesInLayer > 1 ? nodeIndexInLayer * nodeSpacingY : nodeSpacingY);
+                nodePositions[node] = { x, y };
+            });
+        });
+
+        // --- SVG Generation ---
+        let svg = `<svg width="${svgWidth}" height="${svgHeight}" style="font-family: sans-serif;">`;
+        
+        // Define arrowhead marker
+        svg += `
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#c0392b">
+                    <polygon points="0 0, 10 3.5, 0 7" />
+                </marker>
+            </defs>
+        `;
+
+        // --- Draw Elements (Springs) ---
+        const elementCounts = {};
+        elements.forEach(el => {
+            if (isNaN(el.node1) || isNaN(el.node2) || el.node1 === el.node2) return;
+            const n1 = Math.min(el.node1, el.node2);
+            const n2 = Math.max(el.node1, el.node2);
+            const key = `${n1}-${n2}`;
+            if (!elementCounts[key]) elementCounts[key] = { count: 0, total: 0 };
+            elementCounts[key].total++;
+        });
+
+        elements.forEach(el => {
+            if (isNaN(el.node1) || isNaN(el.node2) || !nodePositions[el.node1] || !nodePositions[el.node2] || el.node1 === el.node2) {
+                return; // Skip invalid elements
+            }
+            const n1_key = Math.min(el.node1, el.node2);
+            const n2_key = Math.max(el.node1, el.node2);
+            const key = `${n1_key}-${n2_key}`;
+            
+            elementCounts[key].count++;
+            const parallelOffset = (elementCounts[key].count - (elementCounts[key].total + 1) / 2) * 15;
+
+            const pos1 = nodePositions[el.node1];
+            const pos2 = nodePositions[el.node2];
+
+            const dx = pos2.x - pos1.x;
+            const dy = pos2.y - pos1.y;
+            const angle = Math.atan2(dy, dx);
+            
+            const offsetX = parallelOffset * Math.sin(angle);
+            const offsetY = -parallelOffset * Math.cos(angle);
+
+            const startX = pos1.x + offsetX;
+            const startY = pos1.y + offsetY;
+            const endX = pos2.x + offsetX;
+            const endY = pos2.y + offsetY;
+
+            svg += `<line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="#34495e" stroke-width="2"/>`;
+
+            if (el.label) {
+                const midX = (pos1.x + pos2.x) / 2;
+                const midY = (pos1.y + pos2.y) / 2;
+
+                let labelOffset;
+                if (parallelOffset === 0) {
+                    labelOffset = -18; // Default offset for single lines
+                } else {
+                    labelOffset = parallelOffset + Math.sign(parallelOffset) * 18;
+                }
+                
+                const labelOffsetX = labelOffset * Math.sin(angle);
+                const labelOffsetY = -labelOffset * Math.cos(angle);
+
+                const labelX = midX + labelOffsetX;
+                const labelY = midY + labelOffsetY;
+                svg += `<text x="${labelX}" y="${labelY}" text-anchor="middle" font-size="12" fill="#e67e22">${el.label}</text>`;
+            }
+        });
+
+        // --- Draw Nodes ---
+        Object.keys(nodePositions).forEach(nodeId => {
+            const pos = nodePositions[nodeId];
+            svg += `<circle cx="${pos.x}" cy="${pos.y}" r="${nodeRadius}" fill="#3498db" stroke="#2980b9" stroke-width="2"/>`;
+            svg += `<text x="${pos.x}" y="${pos.y}" text-anchor="middle" dy=".3em" fill="white" font-weight="bold">${nodeId}</text>`;
+        });
+
+        // --- Draw Boundary Conditions ---
+        fixedNodes.forEach((isFixed, i) => {
+            const nodeId = i + 1;
+            if (isFixed && nodePositions[nodeId]) {
+                const pos = nodePositions[nodeId];
+                const supportSize = 20;
+                svg += `<path d="M ${pos.x} ${pos.y} l ${-supportSize/2} ${supportSize} h ${supportSize} Z" fill="#95a5a6" />`;
+            }
+        });
+
+        // --- Draw Forces ---
+        forces.forEach((force, i) => {
+            const nodeId = i + 1;
+            if (force !== 0 && nodePositions[nodeId]) {
+                const pos = nodePositions[nodeId];
+                const isPositive = force > 0;
+                const arrowLength = 50;
+
+                const startX = pos.x + (isPositive ? nodeRadius : -nodeRadius);
+                const endX = startX + (isPositive ? arrowLength : -arrowLength);
+                
+                svg += `<line x1="${startX}" y1="${pos.y}" x2="${endX}" y2="${pos.y}" stroke="#c0392b" stroke-width="2" marker-end="url(#arrowhead)" />`;
+                
+                const labelX = startX + (isPositive ? arrowLength / 2 : -arrowLength / 2);
+                const labelY = pos.y - 10; // Place label 10px above the arrow
+                svg += `<text x="${labelX}" y="${labelY}" text-anchor="middle" font-size="12" fill="#c0392b">${force}</text>`;
+            }
+        });
+
+        svg += '</svg>';
+
+        diagramContainer.innerHTML = svg;
+        diagramModal.style.display = 'flex';
+    };
+
+    showDiagramBtn.addEventListener('click', generateAndShowDiagram);
+
+    diagramModalCloseBtn.addEventListener('click', () => {
+        diagramModal.style.display = 'none';
+    });
+    
     const exportKBtn = document.getElementById('export-k-latex');
     if (exportKBtn) {
         exportKBtn.addEventListener('click', () => {
@@ -602,34 +917,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (calculateStressesBtn) {
         calculateStressesBtn.addEventListener('click', () => {
-            // Ensure displacements have been calculated
-            if (displacementsContainer.innerHTML === '') {
+            if (fullDisplacementVector.length === 0) {
                 alert('Please calculate displacements first.');
                 return;
             }
-
-            const numNodes = parseInt(numNodesInput.value);
-            const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
-            const freeNodesIndices = fixedNodes.map((isFixed, i) => (isFixed ? -1 : i)).filter(i => i !== -1);
-
-            // Re-calculate displacements to ensure we have the latest values
-            const result = getInvertedReducedMatrix();
-            if (!result) return;
-            const { invertedK } = result;
-            const allForces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
-            const freeForces = freeNodesIndices.map(i => allForces[i]);
-            const displacements = freeNodesIndices.map((_, i) => {
-                let d = 0;
-                for (let j = 0; j < freeForces.length; j++) {
-                    d += invertedK[i][j] * freeForces[j];
-                }
-                return d;
-            });
-
-            const fullDisplacementVector = Array(numNodes).fill(0);
-            freeNodesIndices.forEach((nodeIndex, i) => {
-                fullDisplacementVector[nodeIndex] = displacements[i];
-            });
 
             const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
             const elementRows = elementsContainer.querySelectorAll('.element-row');
@@ -652,15 +943,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let tableHTML = '<table><thead><tr><th>Element</th><th>Stress (σ)</th></tr></thead><tbody>';
             stresses.forEach((stress, i) => {
+                const label = elementRows[i].querySelector('.element-label-input').value || `Element ${i + 1}`;
                 if (isNaN(stress)) {
-                    tableHTML += `<tr><td>${i + 1}</td><td>Invalid Input</td></tr>`;
+                    tableHTML += `<tr><td>${label}</td><td>Invalid Input</td></tr>`;
                 } else {
                     const { value: stressValue, exponent: stressExponent } = formatEngineeringNotation(stress, parseInt(decimalPlacesInput.value));
-                    tableHTML += `<tr><td>${i + 1}</td><td>${stressValue} x 10<sup>${stressExponent}</sup></td></tr>`;
+                    tableHTML += `<tr><td>${label}</td><td>${stressValue} x 10<sup>${stressExponent}</sup></td></tr>`;
                 }
             });
             tableHTML += '</tbody></table>';
             stressesContainer.innerHTML = tableHTML;
+        });
+    }
+
+    if (calculateElementForcesBtn) {
+        calculateElementForcesBtn.addEventListener('click', () => {
+            if (fullDisplacementVector.length === 0) {
+                alert('Please calculate displacements first.');
+                return;
+            }
+
+            const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
+            const elementRows = elementsContainer.querySelectorAll('.element-row');
+            const elementForces = [];
+            elementRows.forEach((row, i) => {
+                const stiffness_unscaled = parseFloat(row.querySelector('.stiffness-input').value);
+                if (isNaN(stiffness_unscaled)) {
+                    elementForces.push(NaN); // Invalid input
+                    return;
+                }
+                const stiffness_scaled = stiffness_unscaled * globalMultiplier;
+                const nodeId1 = parseInt(row.querySelectorAll('.node-input')[0].value);
+                const nodeId2 = parseInt(row.querySelectorAll('.node-input')[1].value);
+                const d1 = fullDisplacementVector[nodeId1 - 1];
+                const d2 = fullDisplacementVector[nodeId2 - 1];
+                const force = stiffness_scaled * (d2 - d1);
+                elementForces.push(force);
+            });
+
+            let tableHTML = '<table><thead><tr><th>Element</th><th>Force (f)</th></tr></thead><tbody>';
+            elementForces.forEach((force, i) => {
+                const label = elementRows[i].querySelector('.element-label-input').value || `Element ${i + 1}`;
+                if (isNaN(force)) {
+                    tableHTML += `<tr><td>${label}</td><td>Invalid Input</td></tr>`;
+                } else {
+                    const { value: forceValue, exponent: forceExponent } = formatEngineeringNotation(force, parseInt(decimalPlacesInput.value));
+                    tableHTML += `<tr><td>${label}</td><td>${forceValue} x 10<sup>${forceExponent}</sup></td></tr>`;
+                }
+            });
+            tableHTML += '</tbody></table>';
+            elementForcesContainer.innerHTML = tableHTML;
         });
     }
 
@@ -718,6 +1050,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     makeDraggable(modalContent);
+    makeDraggable(constructionModal.querySelector('.modal-content'));
+    makeDraggable(diagramModal.querySelector('.modal-content'));
 
     modalCloseBtn.addEventListener('click', () => {
         modal.style.display = 'none';

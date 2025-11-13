@@ -77,15 +77,6 @@ label {
     font-weight: 500;
 }
 
-input[type="number"] {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    width: 80px;
-    text-align: center;
-    font-size: 1em;
-}
-
 hr {
     border: none;
     border-top: 1px solid #ecf0f1;
@@ -107,13 +98,22 @@ hr {
 
 .element-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr auto;
     gap: 15px;
     align-items: center;
     margin-bottom: 10px;
     padding: 10px;
     border-radius: 5px;
     background-color: #f8f9fa;
+}
+
+.element-input-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+    box-sizing: border-box;
 }
 
 .element-input-group label {
@@ -130,7 +130,12 @@ button {
     cursor: pointer;
     font-size: 1em;
     font-weight: 500;
-    transition: background-color 0.2s ease;
+    transition: all 0.15s ease-out;
+}
+
+button:active {
+    transform: translateY(1px);
+    filter: brightness(0.95);
 }
 
 .action-section {
@@ -139,6 +144,11 @@ button {
     margin-top: 30px;
     flex-wrap: wrap;
     justify-content: center;
+}
+
+.flex-break {
+    flex-basis: 100%;
+    height: 10px;
 }
 
 #generate-matrix-btn {
@@ -175,14 +185,77 @@ button {
 }
 
 #calculate-displacements-btn {
-    background-color: #8e44ad;
+    background-color: #673AB7;
     color: white;
     padding: 15px;
     font-size: 1.1em;
 }
 
 #calculate-displacements-btn:hover {
-    background-color: #9b59b6;
+    background-color: #512DA8;
+}
+
+#calculate-stresses-btn {
+    background-color: #e67e22;
+    color: white;
+    padding: 15px;
+    font-size: 1.1em;
+}
+
+#calculate-stresses-btn:hover {
+    background-color: #d35400;
+}
+
+#calculate-element-forces-btn {
+    background-color: #f1c40f;
+    color: white;
+    padding: 15px;
+    font-size: 1.1em;
+}
+
+#calculate-element-forces-btn:hover {
+    background-color: #f39c12;
+}
+
+#load-example-1-btn,
+#load-example-3-btn {
+    background-color: #7f8c8d;
+    color: white;
+}
+
+#load-example-1-btn:hover,
+#load-example-3-btn:hover {
+    background-color: #95a5a6;
+}
+
+#activity-2-3-btn {
+    background-color: #7f8c8d;
+    color: white;
+}
+#activity-2-3-btn:hover {
+    background-color: #95a5a6;
+}
+
+#show-construction-btn {
+    background-color: #1abc9c;
+    color: white;
+    padding: 15px;
+    font-size: 1.1em;
+}
+
+#show-construction-btn:hover {
+    background-color: #16a085;
+}
+
+#show-diagram-btn {
+    background-color: #c0392b;
+    color: white;
+    padding: 15px;
+    font-size: 1.1em;
+}
+
+#show-diagram-btn:hover {
+    background-color: #e74c3c;
 }
 
 #boundary-conditions-section, #forces-section {
@@ -279,7 +352,6 @@ td {
 
 .modal-content {
     background-color: #fefefe;
-    margin: 15% auto; /* 15% from the top and centered */
     padding: 20px;
     border: 1px solid #888;
     border-radius: 10px;
@@ -290,6 +362,8 @@ td {
     top: 50%;
     transform: translate(-50%, -50%);
     cursor: move;
+    max-height: 85vh;
+    overflow-y: auto;
 }
 
 .modal-close-btn {
@@ -306,4 +380,31 @@ td {
     color: black;
     text-decoration: none;
     cursor: pointer;
+}
+
+#construction-steps-container h3 {
+    color: #2c3e50;
+    margin-top: 20px;
+    border-bottom: 1px solid #ecf0f1;
+    padding-bottom: 10px;
+}
+
+#construction-steps-container h4 {
+    color: #34495e;
+    margin-top: 15px;
+}
+
+#construction-steps-container p {
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+#construction-steps-container table {
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+
+#construction-steps-container hr {
+    margin: 30px 0;
+    border-top: 2px solid #bdc3c7;
 }
