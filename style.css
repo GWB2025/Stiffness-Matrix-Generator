@@ -97,14 +97,40 @@ hr {
 }
 
 .element-row {
-    display: grid;
-    grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr auto;
-    gap: 15px;
+    display: flex;
     align-items: center;
+    gap: 15px;
     margin-bottom: 10px;
     padding: 10px;
     border-radius: 5px;
     background-color: #f8f9fa;
+}
+
+.element-main-inputs {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.element-row-top, .element-row-bottom {
+    display: flex;
+    gap: 10px;
+}
+
+.element-input-group {
+    flex: 1 1 0; /* Allow flexible growth and shrinking */
+    min-width: 80px; /* Prevent inputs from becoming too small */
+}
+
+.label-group {
+    flex-grow: 2; /* Allow label to take more space */
+}
+
+.element-actions {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
 }
 
 .element-input-group input {
@@ -114,6 +140,34 @@ hr {
     border-radius: 5px;
     font-size: 1em;
     box-sizing: border-box;
+}
+
+.stiffness-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.stiffness-input-wrapper .stiffness-input {
+    flex-grow: 1;
+}
+
+.calculate-k-container {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    margin-left: 5px;
+}
+
+.calculate-k-container label {
+    font-size: 0.8em;
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.calculate-k-checkbox {
+    margin-right: 4px;
+    cursor: pointer;
 }
 
 .element-input-group label {
@@ -146,9 +200,12 @@ button:active {
     justify-content: center;
 }
 
-.flex-break {
-    flex-basis: 100%;
-    height: 10px;
+.button-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
 }
 
 #generate-matrix-btn {
@@ -407,4 +464,37 @@ td {
 #construction-steps-container hr {
     margin: 30px 0;
     border-top: 2px solid #bdc3c7;
+}
+
+/* Summary Button Style */
+.btn-summary {
+    background-color: #8e44ad; /* Vibrant Purple */
+    color: white;
+    padding: 15px;
+    font-size: 1.1em;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-summary:hover {
+    background-color: #9b59b6; /* Lighter Purple on hover */
+}
+
+/* Click feedback animation */
+.btn-summary.is-flashing {
+    animation: flash-success 0.5s ease-out;
+}
+
+@keyframes flash-success {
+    0% {
+        background-color: #8e44ad;
+    }
+    25% {
+        background-color: #af7ac5; /* A lighter, brighter flash color */
+    }
+    100% {
+        background-color: #8e44ad;
+    }
 }

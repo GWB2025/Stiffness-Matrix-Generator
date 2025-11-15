@@ -42,6 +42,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let elementCount = 0;
     let globalStiffnessMatrix = []; // Unscaled
     let fullDisplacementVector = []; // To store nodal displacements
+    let reactionForcesResult = [];
+    let elementStressesResult = [];
+    let elementForcesResult = [];
     let matrixForExport = { K: null, invK: null, kHeaders: null, invKHeaders: null, kMultiplierHtml: '', invKMultiplierHtml: '', kNumericMultiplier: 1, invKNumericMultiplier: 1 };
 
     // --- HELPER FUNCTIONS ---
@@ -82,58 +85,63 @@ document.addEventListener('DOMContentLoaded', () => {
         return { value: (value < 0 ? '-' : '') + formattedValue, exponent: exponent };
     };
 
-    const formatScientificNotationForLatex = (value) => {
-        if (value === 1) return ''; // No multiplier if it's 1
-        if (value === 0) return '0';
+    const formatEngineeringNotationForLatex = (value, precision = 3, wrapInMathMode = true) => {
+        const { value: formattedValue, exponent } = formatEngineeringNotation(value, precision);
 
-        const exponent = Math.floor(Math.log10(Math.abs(value)));
-        const base = value / Math.pow(10, exponent);
-
-        // Ensure base has at most 3 decimal places, and remove trailing zeros
-        const formattedBase = base.toFixed(3).replace(/\.?0+$/, '');
-
-        if (exponent === 0) {
-            return formattedBase;
-        } else {
-            return `${formattedBase} \\times 10^{${exponent}}`;
+        if (formattedValue === 'NaN' || formattedValue.includes('Infinity')) {
+            // These are math-like symbols and should always be in math mode.
+            return `$${formattedValue}$`;
         }
+
+        let output;
+        if (exponent !== 0) {
+            output = `${formattedValue} \\times 10^{${exponent}}`;
+        } else {
+            output = formattedValue;
+        }
+
+        return wrapInMathMode ? `$${output}$` : output;
     };
 
     const generateLatexString = (matrix, headers, numericMultiplierValue) => {
         if (!matrix) return '';
 
-        let latex = '';
+        const decimalPlaces = parseInt(decimalPlacesInput.value);
 
+        let multiplierString = '';
         // Handle multiplier
         if (numericMultiplierValue && numericMultiplierValue !== 1) {
-            const formattedMultiplier = formatScientificNotationForLatex(numericMultiplierValue);
+            const formattedMultiplier = formatEngineeringNotationForLatex(numericMultiplierValue, decimalPlaces, false);
             if (formattedMultiplier) {
-                latex += `$${formattedMultiplier} \\times $\n`;
+                multiplierString = `${formattedMultiplier} \\times \n`;
             }
         }
 
         // Begin matrix
-        // Requires \\usepackage{dcolumn} in your LaTeX preamble for decimal alignment
+        // Use 'r' for right-aligned columns as scientific notation breaks decimal alignment.
         const numCols = matrix[0].length;
-        const decimalPlaces = parseInt(decimalPlacesInput.value);
-        const colFormat = Array(numCols).fill(`D{.}{.}{${decimalPlaces}}`).join('');
-        latex += `\\[\n\\left[\\begin{array}{${colFormat}}\n`;
+        const colFormat = Array(numCols).fill('r').join('');
+        
+        let latex = `\\[\n${multiplierString}\\left[\\begin{array}{${colFormat}}\n`;
 
         // Add matrix data
         matrix.forEach(row => {
-            latex += row.map(val => val.toFixed(decimalPlaces)).join(' & ') + ' \\\\\n';
+            latex += row.map(val => formatEngineeringNotationForLatex(val, decimalPlaces, false)).join(' & ') + ' \\\\\n';
         });
 
         latex += `\\end{array}\\right]\n\\]\n`;
+        return latex;
+    };
 
+    const promptWithLatex = (latex, title = "LaTeX Code") => {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(latex).then(() => {
-                prompt("Copied the LaTeX code to the clipboard. You can also copy it from here:", latex);
+                prompt(`Copied the ${title} to the clipboard. You can also copy it from here:`, latex);
             }, () => {
-                prompt("Failed to copy to clipboard. Please copy the LaTeX code below:", latex);
+                prompt(`Failed to copy to clipboard. Please copy the ${title} below:`, latex);
             });
         } else {
-            prompt("Copy the LaTeX code below:", latex);
+            prompt(`Copy the ${title} below:`, latex);
         }
     };
 
@@ -167,11 +175,21 @@ document.addEventListener('DOMContentLoaded', () => {
             node1: row.querySelector('.node1').value,
             node2: row.querySelector('.node2').value,
             stiffness: row.querySelector('.stiffness-input').value,
-            area: row.querySelector('.area-input').value
+            area: row.querySelector('.area-input').value,
+            length: row.querySelector('.length-input').value,
+            calculateK: row.querySelector('.calculate-k-checkbox').checked
         }));
         const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
         const forces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => input.value);
-        const state = { numNodes: numNodesInput.value, globalMultiplier: globalMultiplierInput.value, decimalPlaces: decimalPlacesInput.value, elements, fixedNodes, forces };
+        const state = { 
+            numNodes: numNodesInput.value, 
+            globalMultiplier: globalMultiplierInput.value, 
+            youngsModulus: document.getElementById('youngs-modulus').value,
+            decimalPlaces: decimalPlacesInput.value, 
+            elements, 
+            fixedNodes, 
+            forces 
+        };
         localStorage.setItem('stiffnessMatrixState', JSON.stringify(state));
     };
 
@@ -185,13 +203,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const state = JSON.parse(savedState);
             numNodesInput.value = state.numNodes || 2;
             globalMultiplierInput.value = state.globalMultiplier || 1;
+            document.getElementById('youngs-modulus').value = state.youngsModulus || '210e9';
             decimalPlacesInput.value = state.decimalPlaces || 4;
 
             // Clear existing elements before loading
             elementsContainer.innerHTML = '';
             if (state.elements && state.elements.length > 0) {
                 state.elements.forEach(el => {
-                    addElementRow(el.node1, el.node2, el.stiffness, el.area, el.label);
+                    const newRow = addElementRow(el.node1, el.node2, el.stiffness, el.area, el.label, el.length);
+                    const calcKCheckbox = newRow.querySelector('.calculate-k-checkbox');
+                    if (el.calculateK) {
+                        calcKCheckbox.checked = true;
+                        // Manually trigger the change event to ensure the stiffness field is updated and disabled
+                        calcKCheckbox.dispatchEvent(new Event('change'));
+                    }
                 });
             } else {
                 // If no elements saved, add a default one for a fresh start
@@ -211,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetAppToDefault = (shouldSave = true) => {
         numNodesInput.value = 2;
         globalMultiplierInput.value = 1;
+        document.getElementById('youngs-modulus').value = '210e9';
         decimalPlacesInput.value = 4;
         elementsContainer.innerHTML = ''; // Clear all elements
         generateBoundaryConditionsUI(2);
@@ -220,8 +246,17 @@ document.addEventListener('DOMContentLoaded', () => {
         displacementsContainer.innerHTML = '';
         reactionForcesContainer.innerHTML = '';
         stressesContainer.innerHTML = '';
+        elementForcesContainer.innerHTML = '';
         globalMatrixMultiplier.innerHTML = '';
         inverseMatrixMultiplier.innerHTML = '';
+        
+        // Clear global calculation results
+        fullDisplacementVector = [];
+        reactionForcesResult = [];
+        elementStressesResult = [];
+        elementForcesResult = [];
+        matrixForExport = { K: null, invK: null, kHeaders: null, invKHeaders: null, kMultiplierHtml: '', invKMultiplierHtml: '', kNumericMultiplier: 1, invKNumericMultiplier: 1 };
+
         if (shouldSave) {
             saveState();
         }
@@ -253,35 +288,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    const addElementRow = (node1 = 1, node2 = 2, stiffness = 1, area = 1, label = '') => {
+    const addElementRow = (node1 = 1, node2 = 2, stiffness = 1, area = 1, label = '', length = 1) => {
         elementCount++;
         const elementRow = document.createElement('div');
         elementRow.classList.add('element-row');
         elementRow.setAttribute('id', `element-${elementCount}`);
         elementRow.innerHTML = `
-            <div class="element-input-group">
-                <label for="label-${elementCount}">Label</label>
-                <input type="text" id="label-${elementCount}" class="element-label-input" value="${label}" placeholder="Element Label (optional)" title="An optional label for the element (e.g., 'k1').">
+            <div class="element-main-inputs">
+                <div class="element-row-top">
+                    <div class="element-input-group label-group">
+                        <label for="label-${elementCount}">Label</label>
+                        <input type="text" id="label-${elementCount}" class="element-label-input" value="${label}" placeholder="Label (optional)" title="An optional label for the element (e.g., 'k1').">
+                    </div>
+                    <div class="element-input-group">
+                        <label for="node1-${elementCount}">Node Left</label>
+                        <input type="number" id="node1-${elementCount}" class="node-input node1" value="${node1}" min="1" max="${parseInt(numNodesInput.value)}" title="The left-hand node the element is connected to.">
+                    </div>
+                    <div class="element-input-group">
+                        <label for="node2-${elementCount}">Node Right</label>
+                        <input type="number" id="node2-${elementCount}" class="node-input node2" value="${node2}" min="1" max="${parseInt(numNodesInput.value)}" title="The right-hand node the element is connected to.">
+                    </div>
+                </div>
+                <div class="element-row-bottom">
+                    <div class="element-input-group">
+                        <label for="area-${elementCount}">Area (A)</label>
+                        <input type="number" id="area-${elementCount}" class="area-input" value="${area}" step="any" title="The cross-sectional area, used for calculating stress and stiffness.">
+                    </div>
+                    <div class="element-input-group">
+                        <label for="length-${elementCount}">Length (l)</label>
+                        <input type="number" id="length-${elementCount}" class="length-input" value="${length}" step="any" title="The length of the element, used for calculating stiffness.">
+                    </div>
+                    <div class="element-input-group stiffness-group">
+                        <label for="stiffness-${elementCount}">Stiffness (k)</label>
+                        <div class="stiffness-input-wrapper">
+                            <input type="number" id="stiffness-${elementCount}" class="stiffness-input" value="${stiffness}" step="any" title="The stiffness value of the element. Can be calculated automatically.">
+                            <div class="calculate-k-container">
+                                <input type="checkbox" id="calc-k-cb-${elementCount}" class="calculate-k-checkbox" title="Tick to calculate stiffness automatically from E, A, and l.">
+                                <label for="calc-k-cb-${elementCount}">Calc k</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="element-input-group">
-                <label for="node1-${elementCount}">Node 1</label>
-                <input type="number" id="node1-${elementCount}" class="node-input node1" value="${node1}" min="1" max="${parseInt(numNodesInput.value)}" title="The first node the element is connected to.">
+            <div class="element-actions">
+                <button type="button" class="remove-element-btn" title="Remove this element from the system.">Remove</button>
             </div>
-            <div class="element-input-group">
-                <label for="node2-${elementCount}">Node 2</label>
-                <input type="number" id="node2-${elementCount}" class="node-input node2" value="${node2}" min="1" max="${parseInt(numNodesInput.value)}" title="The second node the element is connected to.">
-            </div>
-            <div class="element-input-group">
-                <label for="stiffness-${elementCount}">Stiffness (k)</label>
-                <input type="number" id="stiffness-${elementCount}" class="stiffness-input" value="${stiffness}" step="any" title="The stiffness value of the element.">
-            </div>
-            <div class="element-input-group">
-                <label for="area-${elementCount}">Area (A)</label>
-                <input type="number" id="area-${elementCount}" class="area-input" value="${area}" step="any" title="The cross-sectional area, used for calculating stress.">
-            </div>
-            <button type="button" class="remove-element-btn" title="Remove this element from the system.">Remove</button>
         `;
         elementsContainer.appendChild(elementRow);
+
+        // --- Auto-calculation logic for the new row ---
+        const youngsModulusInput = document.getElementById('youngs-modulus');
+        const areaInput = elementRow.querySelector('.area-input');
+        const lengthInput = elementRow.querySelector('.length-input');
+        const stiffnessInput = elementRow.querySelector('.stiffness-input');
+        const calcKCheckbox = elementRow.querySelector('.calculate-k-checkbox');
+
+        const updateStiffness = () => {
+            if (calcKCheckbox.checked) {
+                const E = parseFloat(youngsModulusInput.value);
+                const A = parseFloat(areaInput.value);
+                const l = parseFloat(lengthInput.value);
+                if (!isNaN(E) && !isNaN(A) && !isNaN(l) && l !== 0) {
+                    stiffnessInput.value = (A * E) / l;
+                } else {
+                    stiffnessInput.value = 0;
+                }
+            }
+        };
+
+        calcKCheckbox.addEventListener('change', () => {
+            stiffnessInput.disabled = calcKCheckbox.checked;
+            if (calcKCheckbox.checked) {
+                updateStiffness();
+            }
+        });
+
+        [areaInput, lengthInput].forEach(input => {
+            input.addEventListener('input', updateStiffness);
+        });
+        // --- End of auto-calculation logic ---
 
         elementRow.querySelector('.remove-element-btn').addEventListener('click', () => {
             elementRow.remove();
@@ -299,6 +384,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return elementRow;
     };
+
+    // Add event listener for the global Young's Modulus input
+    const youngsModulusInput = document.getElementById('youngs-modulus');
+    if (youngsModulusInput) {
+        youngsModulusInput.addEventListener('input', () => {
+            document.querySelectorAll('.element-row').forEach(row => {
+                const calcKCheckbox = row.querySelector('.calculate-k-checkbox');
+                if (calcKCheckbox && calcKCheckbox.checked) {
+                    const areaInput = row.querySelector('.area-input');
+                    const lengthInput = row.querySelector('.length-input');
+                    const stiffnessInput = row.querySelector('.stiffness-input');
+                    
+                    const E = parseFloat(youngsModulusInput.value);
+                    const A = parseFloat(areaInput.value);
+                    const l = parseFloat(lengthInput.value);
+
+                    if (!isNaN(E) && !isNaN(A) && !isNaN(l) && l !== 0) {
+                        stiffnessInput.value = (A * E) / l;
+                    } else {
+                        stiffnessInput.value = 0;
+                    }
+                }
+            });
+        });
+    }
 
     const generateAndDisplayMatrix = () => {
         const numNodes = parseInt(numNodesInput.value);
@@ -360,7 +470,13 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < size; i++) {
             tableHTML += `<tr><th>${displayHeaders[i]}</th>`;
             for (let j = 0; j < size; j++) {
-                tableHTML += `<td>${matrix[i][j].toFixed(parseInt(decimalPlacesInput.value))}</td>`;
+                const val = matrix[i][j];
+                const { value: formattedValue, exponent } = formatEngineeringNotation(val, parseInt(decimalPlacesInput.value));
+                let cellContent = formattedValue;
+                if (exponent !== 0) {
+                    cellContent += ` x 10<sup>${exponent}</sup>`;
+                }
+                tableHTML += `<td>${cellContent}</td>`;
             }
             tableHTML += '</tr>';
         }
@@ -465,6 +581,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     calculateDisplacementsBtn.addEventListener('click', () => {
+        // Clear previous downstream results
+        reactionForcesResult = [];
+        elementStressesResult = [];
+        elementForcesResult = [];
+        reactionForcesContainer.innerHTML = '';
+        stressesContainer.innerHTML = '';
+        elementForcesContainer.innerHTML = '';
+
         const result = getInvertedReducedMatrix();
         if (!result) return;
         const { invertedK, freeNodesIndices } = result;
@@ -486,17 +610,6 @@ document.addEventListener('DOMContentLoaded', () => {
         displacementsContainer.innerHTML = tableHTML;
 
         // --- REACTION FORCE CALCULATION ---
-        // The reaction forces (R) are the forces required at the fixed nodes
-        // to maintain equilibrium. The fundamental equation of the system is F = K*d,
-        // where F is the vector of applied external forces, K is the global stiffness
-        // matrix, and d is the vector of nodal displacements.
-        // To find the reaction forces, we can rearrange the equation to R = K*d - F.
-        // For the free nodes, this should result in R_i = 0 (or a very small number
-        // due to floating-point precision), as the internal forces (K*d) balance
-        // the external applied forces (F).
-        // For the fixed nodes, R_i will be non-zero, representing the reaction
-        // force at that support.
-
         const numNodes = parseInt(numNodesInput.value);
         const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
         const fixedNodesIndices = fixedNodes.map((isFixed, i) => (isFixed ? i : -1)).filter(i => i !== -1);
@@ -522,6 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fixedNodesIndices.length > 0) {
             fixedNodesIndices.forEach(nodeIndex => {
                 const force = reactionForces[nodeIndex];
+                reactionForcesResult.push({ node: nodeIndex + 1, force: force }); // Store result
                 const { value: forceValue, exponent: forceExponent } = formatEngineeringNotation(force, parseInt(decimalPlacesInput.value));
                 reactionTableHTML += `<tr><td>${nodeIndex + 1}</td><td>${forceValue} x 10<sup>${forceExponent}</sup></td></tr>`;
             });
@@ -897,7 +1011,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (exportKBtn) {
         exportKBtn.addEventListener('click', () => {
             if (matrixForExport.K) {
-                generateLatexString(matrixForExport.K, matrixForExport.kHeaders, matrixForExport.kNumericMultiplier);
+                const latexString = generateLatexString(matrixForExport.K, matrixForExport.kHeaders, matrixForExport.kNumericMultiplier);
+                promptWithLatex(latexString, "Global Stiffness Matrix (K)");
             } else {
                 alert('Please generate the matrix first.');
             }
@@ -908,7 +1023,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (exportInvKBtn) {
         exportInvKBtn.addEventListener('click', () => {
             if (matrixForExport.invK) {
-                generateLatexString(matrixForExport.invK, matrixForExport.invKHeaders, matrixForExport.invKNumericMultiplier);
+                const latexString = generateLatexString(matrixForExport.invK, matrixForExport.invKHeaders, matrixForExport.invKNumericMultiplier);
+                promptWithLatex(latexString, "Inverse of Reduced Matrix");
             } else {
                 alert('Please generate the inverse matrix first.');
             }
@@ -921,15 +1037,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Please calculate displacements first.');
                 return;
             }
+            elementStressesResult = []; // Clear previous results
 
             const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
             const elementRows = elementsContainer.querySelectorAll('.element-row');
             const stresses = [];
             elementRows.forEach((row, i) => {
+                const label = row.querySelector('.element-label-input').value || `Element ${i + 1}`;
                 const stiffness_unscaled = parseFloat(row.querySelector('.stiffness-input').value);
                 const area = parseFloat(row.querySelector('.area-input').value);
                 if (isNaN(stiffness_unscaled) || isNaN(area) || area === 0) {
                     stresses.push(NaN); // Invalid input
+                    elementStressesResult.push({ label: label, stress: NaN });
                     return;
                 }
                 const stiffness_scaled = stiffness_unscaled * globalMultiplier;
@@ -939,16 +1058,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const d2 = fullDisplacementVector[nodeId2 - 1];
                 const stress = (stiffness_scaled / area) * (d2 - d1);
                 stresses.push(stress);
+                elementStressesResult.push({ label: label, stress: stress }); // Store result
             });
 
             let tableHTML = '<table><thead><tr><th>Element</th><th>Stress (σ)</th></tr></thead><tbody>';
-            stresses.forEach((stress, i) => {
-                const label = elementRows[i].querySelector('.element-label-input').value || `Element ${i + 1}`;
-                if (isNaN(stress)) {
-                    tableHTML += `<tr><td>${label}</td><td>Invalid Input</td></tr>`;
+            elementStressesResult.forEach(result => {
+                if (isNaN(result.stress)) {
+                    tableHTML += `<tr><td>${result.label}</td><td>Invalid Input</td></tr>`;
                 } else {
-                    const { value: stressValue, exponent: stressExponent } = formatEngineeringNotation(stress, parseInt(decimalPlacesInput.value));
-                    tableHTML += `<tr><td>${label}</td><td>${stressValue} x 10<sup>${stressExponent}</sup></td></tr>`;
+                    const { value: stressValue, exponent: stressExponent } = formatEngineeringNotation(result.stress, parseInt(decimalPlacesInput.value));
+                    tableHTML += `<tr><td>${result.label}</td><td>${stressValue} x 10<sup>${stressExponent}</sup></td></tr>`;
                 }
             });
             tableHTML += '</tbody></table>';
@@ -962,14 +1081,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Please calculate displacements first.');
                 return;
             }
+            elementForcesResult = []; // Clear previous results
 
             const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
             const elementRows = elementsContainer.querySelectorAll('.element-row');
-            const elementForces = [];
+            
             elementRows.forEach((row, i) => {
+                const label = row.querySelector('.element-label-input').value || `Element ${i + 1}`;
                 const stiffness_unscaled = parseFloat(row.querySelector('.stiffness-input').value);
                 if (isNaN(stiffness_unscaled)) {
-                    elementForces.push(NaN); // Invalid input
+                    elementForcesResult.push({ label: label, force: NaN }); // Invalid input
                     return;
                 }
                 const stiffness_scaled = stiffness_unscaled * globalMultiplier;
@@ -978,23 +1099,193 @@ document.addEventListener('DOMContentLoaded', () => {
                 const d1 = fullDisplacementVector[nodeId1 - 1];
                 const d2 = fullDisplacementVector[nodeId2 - 1];
                 const force = stiffness_scaled * (d2 - d1);
-                elementForces.push(force);
+                elementForcesResult.push({ label: label, force: force }); // Store result
             });
 
             let tableHTML = '<table><thead><tr><th>Element</th><th>Force (f)</th></tr></thead><tbody>';
-            elementForces.forEach((force, i) => {
-                const label = elementRows[i].querySelector('.element-label-input').value || `Element ${i + 1}`;
-                if (isNaN(force)) {
-                    tableHTML += `<tr><td>${label}</td><td>Invalid Input</td></tr>`;
+            elementForcesResult.forEach(result => {
+                if (isNaN(result.force)) {
+                    tableHTML += `<tr><td>${result.label}</td><td>Invalid Input</td></tr>`;
                 } else {
-                    const { value: forceValue, exponent: forceExponent } = formatEngineeringNotation(force, parseInt(decimalPlacesInput.value));
-                    tableHTML += `<tr><td>${label}</td><td>${forceValue} x 10<sup>${forceExponent}</sup></td></tr>`;
+                    const { value: forceValue, exponent: forceExponent } = formatEngineeringNotation(result.force, parseInt(decimalPlacesInput.value));
+                    tableHTML += `<tr><td>${result.label}</td><td>${forceValue} x 10<sup>${forceExponent}</sup></td></tr>`;
                 }
             });
             tableHTML += '</tbody></table>';
             elementForcesContainer.innerHTML = tableHTML;
         });
     }
+
+    const generateLatexSummary = () => {
+        const btn = document.getElementById('generate-summary-btn');
+        
+        // Visual feedback
+        btn.classList.add('is-flashing');
+        setTimeout(() => {
+            btn.classList.remove('is-flashing');
+        }, 500);
+
+        const decimalPlaces = parseInt(decimalPlacesInput.value);
+        let summary = `% LaTeX Summary from Stiffness Matrix Generator\n`;
+        summary += `% Generated on: ${new Date().toUTCString()}\n\n`;
+
+        // --- 1. Input Summary ---
+        summary += `%\\documentclass{article}\n`;
+        summary += `%\\usepackage{amsmath}\n`;
+        summary += `%\\usepackage{graphicx}\n`;
+        summary += `%\\usepackage{geometry}\n`;
+        summary += `%\\geometry{a4paper, margin=1in}\n\n`;
+        summary += `%\\begin{document}\n\n`;
+        summary += `\\section*{Stiffness Matrix Analysis Summary}\n\n`;
+
+        summary += `\\subsection*{Input Parameters}\n`;
+        summary += `\\begin{itemize}\n`;
+        summary += `    \\item Number of Nodes: ${numNodesInput.value}\n`;
+        summary += `    \\item Young's Modulus (E): ${formatEngineeringNotationForLatex(parseFloat(document.getElementById('youngs-modulus').value), decimalPlaces)}\n`;
+        summary += `    \\item Global Multiplier: ${formatEngineeringNotationForLatex(parseFloat(globalMultiplierInput.value), decimalPlaces)}\n`;
+        summary += `\\end{itemize}\n\n`;
+
+        // Elements Table
+        summary += `\\subsubsection*{Elements}\n`;
+        summary += `\\begin{tabular}{|l|c|c|r|r|r|}\n`;
+        summary += `\\hline\n`;
+        summary += `\\textbf{Label} & \\textbf{Node Left} & \\textbf{Node Right} & \\textbf{Area (A)} & \\textbf{Length (l)} & \\textbf{Stiffness (k)} \\\\\n`;
+        summary += `\\hline\n`;
+        const elementRows = elementsContainer.querySelectorAll('.element-row');
+        if (elementRows.length > 0) {
+            elementRows.forEach(row => {
+                const label = row.querySelector('.element-label-input').value || '-';
+                const node1 = row.querySelector('.node1').value;
+                const node2 = row.querySelector('.node2').value;
+                const area = parseFloat(row.querySelector('.area-input').value);
+                const length = parseFloat(row.querySelector('.length-input').value);
+                const stiffness = parseFloat(row.querySelector('.stiffness-input').value);
+                summary += `${label} & ${node1} & ${node2} & ${formatEngineeringNotationForLatex(area, decimalPlaces)} & ${formatEngineeringNotationForLatex(length, decimalPlaces)} & ${formatEngineeringNotationForLatex(stiffness, decimalPlaces)} \\\\\n`;
+            });
+        } else {
+            summary += `\\multicolumn{6}{|c|}{No elements defined.} \\\\\n`;
+        }
+        summary += `\\hline\n`;
+        summary += `\\end{tabular}\n\n`;
+
+        // Boundary Conditions
+        const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input:checked')).map(cb => cb.id.split('-')[2]);
+        summary += `\\subsubsection*{Boundary Conditions}\n`;
+        summary += `The following nodes are fixed: ${fixedNodes.length > 0 ? fixedNodes.join(', ') : 'None'}.\n\n`;
+
+        // Applied Forces
+        const forces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
+        const appliedForces = forces.map((f, i) => ({ node: i + 1, force: f })).filter(item => item.force !== 0);
+        summary += `\\subsubsection*{Applied Forces}\n`;
+        if (appliedForces.length > 0) {
+            summary += `\\begin{tabular}{|c|r|}\n`;
+            summary += `\\hline\n`;
+            summary += `\\textbf{Node} & \\textbf{Force (F)} \\\\\n`;
+            summary += `\\hline\n`;
+            appliedForces.forEach(item => {
+                summary += `${item.node} & ${formatEngineeringNotationForLatex(item.force, decimalPlaces)} \\\\\n`;
+            });
+            summary += `\\hline\n`;
+            summary += `\\end{tabular}\n\n`;
+        } else {
+            summary += `No external forces applied.\n\n`;
+        }
+
+        // --- 2. Analysis Results ---
+        summary += `\\subsection*{Analysis Results}\n`;
+
+        // Global Stiffness Matrix
+        summary += `\\subsubsection*{Global Stiffness Matrix (K)}\n`;
+        if (matrixForExport.K) {
+            summary += generateLatexString(matrixForExport.K, matrixForExport.kHeaders, matrixForExport.kNumericMultiplier);
+        } else {
+            summary += `Not calculated.\n\n`;
+        }
+
+        // Inverse Matrix
+        summary += `\\subsubsection*{Inverse of Reduced Matrix ($K_r^{-1}$)}\n`;
+        if (matrixForExport.invK) {
+            summary += generateLatexString(matrixForExport.invK, matrixForExport.invKHeaders, matrixForExport.invKNumericMultiplier);
+        } else {
+            summary += `Not calculated.\n\n`;
+        }
+
+        // Displacements
+        summary += `\\subsubsection*{Nodal Displacements (d)}\n`;
+        if (fullDisplacementVector.length > 0) {
+            summary += `\\begin{tabular}{|c|r|}\n`;
+            summary += `\\hline\n`;
+            summary += `\\textbf{Node} & \\textbf{Displacement} \\\\\n`;
+            summary += `\\hline\n`;
+            fullDisplacementVector.forEach((d, i) => {
+                if (d !== 0) { // Only show non-zero displacements
+                    summary += `${i + 1} & ${formatEngineeringNotationForLatex(d, decimalPlaces)} \\\\\n`;
+                }
+            });
+            summary += `\\hline\n`;
+            summary += `\\end{tabular}\n\n`;
+        } else {
+            summary += `Not calculated.\n\n`;
+        }
+
+        // Reaction Forces
+        summary += `\\subsubsection*{Reaction Forces (R)}\n`;
+        if (reactionForcesResult.length > 0) {
+            summary += `\\begin{tabular}{|c|r|}\n`;
+            summary += `\\hline\n`;
+            summary += `\\textbf{Node} & \\textbf{Reaction Force} \\\\\n`;
+            summary += `\\hline\n`;
+            reactionForcesResult.forEach(r => {
+                summary += `${r.node} & ${formatEngineeringNotationForLatex(r.force, decimalPlaces)} \\\\\n`;
+            });
+            summary += `\\hline\n`;
+            summary += `\\end{tabular}\n\n`;
+        } else {
+            summary += `Not calculated.\n\n`;
+        }
+
+        // Elemental Forces
+        summary += `\\subsubsection*{Elemental Forces (f)}\n`;
+        if (elementForcesResult.length > 0) {
+            summary += `\\begin{tabular}{|l|r|}\n`;
+            summary += `\\hline\n`;
+            summary += `\\textbf{Element} & \\textbf{Force} \\\\\n`;
+            summary += `\\hline\n`;
+            elementForcesResult.forEach(f => {
+                summary += `${f.label.replace(/&/g, '\\&')} & ${formatEngineeringNotationForLatex(f.force, decimalPlaces)} \\\\\n`;
+            });
+            summary += `\\hline\n`;
+            summary += `\\end{tabular}\n\n`;
+        } else {
+            summary += `Not calculated.\n\n`;
+        }
+
+        // Elemental Stresses
+        summary += `\\subsubsection*{Elemental Stresses ($\\sigma$)}\n`;
+        if (elementStressesResult.length > 0) {
+            summary += `\\begin{tabular}{|l|r|}\n`;
+            summary += `\\hline\n`;
+            summary += `\\textbf{Element} & \\textbf{Stress} \\\\\n`;
+            summary += `\\hline\n`;
+            elementStressesResult.forEach(s => {
+                summary += `${s.label.replace(/&/g, '\\&')} & ${formatEngineeringNotationForLatex(s.stress, decimalPlaces)} \\\\\n`;
+            });
+            summary += `\\hline\n`;
+            summary += `\\end{tabular}\n\n`;
+        } else {
+            summary += `Not calculated.\n\n`;
+        }
+        
+        summary += `%\\end{document}\n`;
+
+        promptWithLatex(summary, "LaTeX Analysis Summary");
+    };
+
+    const generateSummaryBtn = document.getElementById('generate-summary-btn');
+    if (generateSummaryBtn) {
+        generateSummaryBtn.addEventListener('click', generateLatexSummary);
+    }
+
 
     // --- MODAL LOGIC ---
     const modalContent = document.querySelector('.modal-content');

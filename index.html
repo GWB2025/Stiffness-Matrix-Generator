@@ -16,6 +16,10 @@
                         <input type="number" id="global-multiplier" value="1" step="any" title="Enter a global multiplier to scale all stiffness values.">
                     </div>
                     <div class="input-group">
+                        <label for="youngs-modulus">Young's Modulus (E):</label>
+                        <input type="number" id="youngs-modulus" value="210e9" step="any" title="Enter a global value for Young's Modulus (e.g., 210e9 for steel).">
+                    </div>
+                    <div class="input-group">
                         <label for="decimal-places">Decimal Places:</label>
                         <input type="number" id="decimal-places" value="4" min="0" max="10" title="Set the number of decimal places for displayed results.">
                     </div>
@@ -44,23 +48,24 @@
             </div>
         </div>
         <div class="action-section">
-            <button id="generate-matrix-btn" title="Generate the global stiffness matrix from the defined elements.">Generate Stiffness Matrix</button>
-            <button id="invert-matrix-btn" title="Invert the reduced stiffness matrix (for free nodes only).">Invert Matrix</button>
-            <button id="calculate-displacements-btn" title="Calculate the nodal displacements, which also computes reaction forces.">Calculate Displacements</button>
-            <button id="calculate-stresses-btn" title="Calculate the stress within each element.">Calculate Stresses</button>
-            <button id="calculate-element-forces-btn" title="Calculate the internal force within each element.">Calculate Element Forces</button>
-            <button id="show-diagram-btn" title="Generate and display a 2D diagram of the system.">Show Diagram</button>
-            <button id="show-construction-btn" title="Show a step-by-step guide on how the stiffness matrix is assembled.">Help: Matrix Construction</button>
-            
-            <div class="flex-break"></div>
-
-            <button id="load-example-1-btn" title="Load the 'Example 2.2' problem data.">Example 2.2</button>
-            <button id="load-example-3-btn" title="Load the 'Example 2.3' problem data.">Example 2.3</button>
-            <button id="activity-2-3-btn" title="Load the 'Activity 2.3' problem data.">Activity 2.3</button>
-
-            <div class="flex-break"></div>
-
-            <button id="clear-app-btn" title="Clear all inputs and results.">Clear</button>
+            <div class="button-row">
+                <button id="generate-matrix-btn" title="Generate the global stiffness matrix from the defined elements.">Generate Stiffness Matrix</button>
+                <button id="invert-matrix-btn" title="Invert the reduced stiffness matrix (for free nodes only).">Invert Matrix</button>
+                <button id="calculate-displacements-btn" title="Calculate the nodal displacements, which also computes reaction forces.">Calculate Displacements</button>
+                <button id="calculate-stresses-btn" title="Calculate the stress within each element.">Calculate Stresses</button>
+                <button id="calculate-element-forces-btn" title="Calculate the internal force within each element.">Calculate Element Forces</button>
+                <button id="generate-summary-btn" class="btn-summary" title="Generate a LaTeX snippet summarizing the entire analysis.">Summary</button>
+            </div>
+            <div class="button-row">
+                <button id="load-example-1-btn" title="Load the 'Example 2.2' problem data.">Example 2.2</button>
+                <button id="load-example-3-btn" title="Load the 'Example 2.3' problem data.">Example 2.3</button>
+                <button id="activity-2-3-btn" title="Load the 'Activity 2.3' problem data.">Activity 2.3</button>
+            </div>
+            <div class="button-row">
+                <button id="show-diagram-btn" title="Generate and display a 2D diagram of the system.">Show Diagram</button>
+                <button id="show-construction-btn" title="Show a step-by-step guide on how the stiffness matrix is assembled.">Help: Matrix Construction</button>
+                <button id="clear-app-btn" title="Clear all inputs and results.">Clear</button>
+            </div>
         </div>
         <div id="matrix-output" class="matrix-output-section">
             <h2 class="output-title"><span id="k-title">Global Stiffness Matrix (K)</span> <button id="export-k-latex" class="export-btn" title="Export to LaTeX">TeX</button></h2>
