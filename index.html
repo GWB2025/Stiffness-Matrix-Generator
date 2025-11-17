@@ -9,98 +9,143 @@
 </head>
 <body>
     <div class="container">
-        <h1>Stiffness Matrix Generator</h1>
-        <div class="input-section">
-                    <div class="input-group">
-                        <label for="global-multiplier">Global Multiplier:</label>
-                        <input type="number" id="global-multiplier" value="1" step="any" title="Enter a global multiplier to scale all stiffness values.">
-                    </div>
-                    <div class="input-group">
-                        <label for="youngs-modulus">Young's Modulus (E):</label>
-                        <input type="number" id="youngs-modulus" value="210e9" step="any" title="Enter a global value for Young's Modulus (e.g., 210e9 for steel).">
-                    </div>
-                    <div class="input-group">
-                        <label for="decimal-places">Decimal Places:</label>
-                        <input type="number" id="decimal-places" value="4" min="0" max="10" title="Set the number of decimal places for displayed results.">
-                    </div>
-                </div>
+        <header class="app-header">
+            <h1>Stiffness Matrix Generator</h1>
+            <p class="app-subtitle">Model, solve, and document 1D spring/axial systems with consistent helpers.</p>
+        </header>
 
-                <div class="input-group-row">
-                    <div class="input-group">
-                        <label for="num-nodes">Number of Nodes:</label>
-                        <input type="number" id="num-nodes" value="2" min="2" max="10" title="Set the total number of nodes in the system.">
-                    </div>
-            <div id="boundary-conditions-section">
-                <h2>Boundary Conditions (Fixed Nodes)</h2>
-                <div id="fixed-nodes-container"></div>
+        <section class="panel input-section">
+            <div class="panel-header">
+                <h2>Global Parameters</h2>
+                <p>Baseline values used when assembling the global stiffness matrix.</p>
             </div>
-            <hr>
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="global-multiplier">Global Multiplier</label>
+                    <input type="number" id="global-multiplier" value="1" step="any" title="Enter a global multiplier to scale all stiffness values.">
+                </div>
+                <div class="input-group">
+                    <label for="youngs-modulus">Young's Modulus (E)</label>
+                    <input type="number" id="youngs-modulus" value="210e9" step="any" title="Enter a global value for Young's Modulus (e.g., 210e9 for steel).">
+                </div>
+                <div class="input-group">
+                    <label for="decimal-places">Decimal Places</label>
+                    <input type="number" id="decimal-places" value="4" min="0" max="10" title="Set the number of decimal places for displayed results.">
+                </div>
+                <div class="input-group">
+                    <label for="num-nodes">Number of Nodes</label>
+                    <input type="number" id="num-nodes" value="2" min="2" max="10" title="Set the total number of nodes in the system.">
+                </div>
+            </div>
+        </section>
+
+        <section id="boundary-conditions-section" class="panel">
+            <div class="panel-header">
+                <h2>Boundary Conditions (Fixed Nodes)</h2>
+                <p>Toggle which nodes are constrained before solving.</p>
+            </div>
+            <div id="fixed-nodes-container" class="flash-target grid-flow"></div>
+        </section>
+
+        <section class="panel elements-panel">
             <div class="elements-header">
-                <h2>Elements</h2>
-                <button id="add-element-btn" title="Add a new spring element to the system.">Add Element</button>
+                <div>
+                    <h2>Elements</h2>
+                    <p>Define connectivity and properties for each element.</p>
+                </div>
+                <button id="add-element-btn" class="btn btn--info" title="Add a new spring element to the system.">Add Element</button>
             </div>
             <div id="elements-container">
                 <!-- Element inputs will be added here dynamically -->
             </div>
-            <div id="forces-section">
+        </section>
+
+        <section id="forces-section" class="panel">
+            <div class="panel-header">
                 <h2>Applied Forces (F)</h2>
-                <div id="forces-container"></div>
+                <p>Specify the force acting at each node.</p>
             </div>
-        </div>
-        <div class="action-section">
-            <div class="button-row">
-                <button id="generate-matrix-btn" title="Generate the global stiffness matrix from the defined elements.">Generate Stiffness Matrix</button>
-                <button id="invert-matrix-btn" title="Invert the reduced stiffness matrix (for free nodes only).">Invert Matrix</button>
-                <button id="calculate-displacements-btn" title="Calculate the nodal displacements, which also computes reaction forces.">Calculate Displacements</button>
-                <button id="calculate-stresses-btn" title="Calculate the stress within each element.">Calculate Stresses</button>
-                <button id="calculate-element-forces-btn" title="Calculate the internal force within each element.">Calculate Element Forces</button>
-                <button id="generate-summary-btn" class="btn-summary" title="Generate a LaTeX snippet summarizing the entire analysis.">Summary</button>
+            <div id="forces-container" class="flash-target grid-flow"></div>
+        </section>
+
+        <section class="panel action-section panel--actions">
+            <div class="panel-header">
+                <h2>Analysis Actions</h2>
+                <p>Sequence the solver steps and inspect results.</p>
             </div>
             <div class="button-row">
-                <button id="load-example-1-btn" title="Load the 'Example 2.2' problem data.">Example 2.2</button>
-                <button id="load-example-3-btn" title="Load the 'Example 2.3' problem data.">Example 2.3</button>
-                <button id="activity-2-3-btn" title="Load the 'Activity 2.3' problem data.">Activity 2.3</button>
+                <button id="generate-matrix-btn" class="btn btn--success" title="Generate the global stiffness matrix from the defined elements.">Generate Stiffness Matrix</button>
+                <button id="invert-matrix-btn" class="btn btn--info" title="Invert the reduced stiffness matrix (for free nodes only).">Invert Matrix</button>
+                <button id="calculate-displacements-btn" class="btn btn--indigo" title="Calculate the nodal displacements, which also computes reaction forces.">Calculate Displacements</button>
+                <button id="calculate-stresses-btn" class="btn btn--orange" title="Calculate the stress within each element.">Calculate Stresses</button>
+                <button id="calculate-element-forces-btn" class="btn btn--gold" title="Calculate the internal force within each element.">Calculate Element Forces</button>
+                <button id="generate-summary-btn" class="btn btn-summary" title="Generate a LaTeX snippet summarising the entire analysis.">Summary</button>
             </div>
-        </div>
-        <div class="utility-button-row">
-            <button id="show-diagram-btn" title="Generate and display a 2D diagram of the system.">Show Diagram</button>
-            <button id="show-construction-btn" title="Show a step-by-step guide on how the stiffness matrix is assembled.">Help: Matrix Construction</button>
-            <button id="clear-app-btn" title="Clear all inputs and results.">Clear</button>
-        </div>
-        <div id="matrix-output" class="matrix-output-section">
+            <div class="preset-accordion">
+                <details>
+                    <summary>Saved presets</summary>
+                    <div class="preset-list">
+                        <button id="activity-2-3-btn" class="btn btn--muted btn--compact" title="Load the 'Activity 2.3' problem data.">Activity 2.3</button>
+                        <button id="load-example-1-btn" class="btn btn--muted btn--compact" title="Load the 'Example 2.2' problem data.">Example 2.2</button>
+                        <button id="load-example-3-btn" class="btn btn--muted btn--compact" title="Load the 'Example 2.3' problem data.">Example 2.3</button>
+                        <button id="load-example-cook-btn" class="btn btn--muted btn--compact" title="Load the Cook et al. cantilever-bar problem setup.">Cook Cantilever</button>
+                        <button id="load-example-moaveni-btn" class="btn btn--muted btn--compact" title="Load the Moaveni parallel-branch example.">Moaveni Parallel</button>
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <section class="panel utility-panel">
+            <div class="utility-button-row">
+                <button id="show-diagram-btn" class="btn btn--danger" title="Generate and display a 2D diagram of the system.">Show Diagram</button>
+                <button id="show-construction-btn" class="btn btn--teal" title="Show a step-by-step guide on how the stiffness matrix is assembled.">Help: Matrix Construction</button>
+                <button id="clear-app-btn" class="btn btn--warning" title="Clear all inputs and results.">Clear</button>
+                <button id="export-json-btn" class="btn btn--slate" title="Download a JSON file with the current setup.">Export Setup</button>
+                <button id="import-json-btn" class="btn btn--slate" title="Load a setup from a JSON file.">Import Setup</button>
+                <input type="file" id="import-json-input" accept="application/json" style="display:none;">
+            </div>
+        </section>
+
+        <section id="matrix-output" class="panel matrix-output-section">
             <h2 class="output-title"><span id="k-title">Global Stiffness Matrix (K)</span> <button id="export-k-latex" class="export-btn" title="Export to LaTeX">TeX</button></h2>
             <div class="matrix-display-container">
-                <div class="matrix-multiplier" id="global-matrix-multiplier"></div>
-                <div id="matrix-container"></div>
+                <div class="matrix-multiplier flash-target" id="global-matrix-multiplier"></div>
+                <div id="matrix-container" class="flash-target matrix-scroll"></div>
             </div>
-        </div>
-        <div id="inverse-matrix-output" class="matrix-output-section">
+        </section>
+        <section id="inverse-matrix-output" class="panel matrix-output-section">
             <h2 class="output-title"><span id="inv-k-title">Inverse of Reduced Matrix (K_r⁻¹)</span> <button id="export-inv-k-latex" class="export-btn" title="Export to LaTeX">TeX</button></h2>
             <div class="matrix-display-container">
-                <div class="matrix-multiplier" id="inverse-matrix-multiplier"></div>
-                <div id="inverse-matrix-container"></div>
+                <div class="matrix-multiplier flash-target" id="inverse-matrix-multiplier"></div>
+                <div id="inverse-matrix-container" class="flash-target matrix-scroll"></div>
             </div>
-        </div>
-            <div class="output-container">
-                <h3 class="output-title">Displacements (d)</h3>
-                <div id="displacements-container" class="results-box"></div>
-            </div>
+        </section>
+        <section class="panel results-panel">
+            <h2 class="output-title">Result Summaries</h2>
+            <div class="results-grid">
+                <div class="output-container">
+                    <h3 class="output-title">Displacements (d)</h3>
+                    <div id="displacements-container" class="results-box flash-target"></div>
+                </div>
 
-            <div class="output-container">
-                <h3 class="output-title">Reaction Forces (R)</h3>
-                <div id="reaction-forces-container" class="results-box"></div>
-            </div>
+                <div class="output-container">
+                    <h3 class="output-title">Reaction Forces (R)</h3>
+                    <div id="reaction-forces-container" class="results-box flash-target"></div>
+                </div>
 
-            <div class="output-container">
-                <h3 class="output-title">Elemental Stresses (σ)</h3>
-                <div id="stresses-container" class="results-box"></div>
-            </div>
+                <div class="output-container">
+                    <h3 class="output-title">Elemental Stresses (σ)</h3>
+                    <div id="stresses-container" class="results-box flash-target"></div>
+                </div>
 
-            <div class="output-container">
-                <h3 class="output-title">Element Forces (f)</h3>
-                <div id="element-forces-container" class="results-box"></div>
+                <div class="output-container">
+                    <h3 class="output-title">Element Forces (f)</h3>
+                    <div id="element-forces-container" class="results-box flash-target"></div>
+                </div>
             </div>
+        </section>
     </div>
+    <script src="calculations.js"></script>
     <script src="script.js"></script>
 
     <div id="example-modal" class="modal-overlay">

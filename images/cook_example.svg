@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="320" viewBox="0 0 720 320">
+  <defs>
+    <style>
+      .support { fill:#d8d9da; stroke:#1f1e21; stroke-width:2; }
+      .baseline, .spring, .arrow, .node-line { stroke:#1f1e21; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+      .spring { stroke-width:2.2; }
+      .connector { stroke:#1f1e21; stroke-width:3; fill:none; stroke-linecap:round; }
+      .node { fill:#ffffff; stroke:#1f1e21; stroke-width:2; }
+      .text { font-family:"Times New Roman", serif; fill:#1f1e21; font-size:16px; }
+      .label { font-size:14px; fill:#0089c6; }
+      .title { font-size:18px; font-weight:700; fill:#1f1e21; }
+      .length { font-size:13px; fill:#0089c6; }
+      .dim-line { stroke:#0089c6; stroke-width:1.5; marker-start:url(#dimArrow); marker-end:url(#dimArrow); }
+      .load-arrow { stroke:#c24030; stroke-width:2.2; fill:none; marker-end:url(#loadHead); }
+    </style>
+    <marker id="dimArrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#0089c6"/>
+    </marker>
+    <marker id="loadHead" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#c24030"/>
+    </marker>
+  </defs>
+
+  <text class="title" x="360" y="36" text-anchor="middle">Cook et al. Cantilever - Equivalent Spring Idealisation</text>
+
+  <!-- fixed support -->
+  <rect class="support" x="40" y="100" width="30" height="120"/>
+  <line class="connector" x1="70" y1="160" x2="120" y2="160"/>
+  <path class="spring" d="M 120 160 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30"/>
+  <line class="connector" x1="240" y1="160" x2="260" y2="160"/>
+
+  <path class="spring" d="M 260 160 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30"/>
+  <line class="connector" x1="380" y1="160" x2="400" y2="160"/>
+
+  <path class="spring" d="M 400 160 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30 l 10 -30 l 10 30"/>
+  <line class="connector" x1="520" y1="160" x2="540" y2="160"/>
+
+  <!-- Nodes -->
+  <circle class="node" cx="120" cy="160" r="8"/>
+  <circle class="node" cx="260" cy="160" r="8"/>
+  <circle class="node" cx="400" cy="160" r="8"/>
+  <circle class="node" cx="540" cy="160" r="8"/>
+
+  <!-- Load -->
+  <line class="load-arrow" x1="540" y1="90" x2="540" y2="150"/>
+  <text class="text" x="580" y="90" fill="#c24030">P = 50 kN</text>
+  <text class="label" x="540" y="188" text-anchor="middle">Node 4</text>
+
+  <!-- Node labels -->
+  <text class="label" x="120" y="188" text-anchor="middle">Node 1 (fixed)</text>
+  <text class="label" x="260" y="188" text-anchor="middle">Node 2</text>
+  <text class="label" x="400" y="188" text-anchor="middle">Node 3</text>
+
+  <!-- Spring labels -->
+  <text class="text" x="190" y="100" text-anchor="middle">Bar 1</text>
+  <text class="text" x="330" y="100" text-anchor="middle">Bar 2</text>
+  <text class="text" x="470" y="100" text-anchor="middle">Bar 3</text>
+  <text class="label" x="190" y="214" text-anchor="middle">A = 2.0 &#215; 10<tspan baseline-shift="super">-4</tspan> m<tspan baseline-shift="super">2</tspan></text>
+
+  <text class="label" x="330" y="214" text-anchor="middle">A = 1.5 &#215; 10<tspan baseline-shift="super">-4</tspan> m<tspan baseline-shift="super">2</tspan></text>
+
+  <text class="label" x="470" y="214" text-anchor="middle">A = 1.0 &#215; 10<tspan baseline-shift="super">-4</tspan> m<tspan baseline-shift="super">2</tspan></text>
+
+  <!-- Dimensions -->
+  <line class="dim-line" x1="120" y1="265" x2="260" y2="265"/>
+  <text class="length" x="190" y="293" text-anchor="middle">L<tspan baseline-shift="sub">1</tspan> = 1.5 m</text>
+  <line class="dim-line" x1="260" y1="265" x2="400" y2="265"/>
+  <text class="length" x="330" y="293" text-anchor="middle">L<tspan baseline-shift="sub">2</tspan> = 1.0 m</text>
+  <line class="dim-line" x1="400" y1="265" x2="540" y2="265"/>
+  <text class="length" x="470" y="293" text-anchor="middle">L<tspan baseline-shift="sub">3</tspan> = 0.5 m</text>
+</svg>

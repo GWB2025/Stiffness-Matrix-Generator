@@ -1,8 +1,8 @@
-# 1D Stiffness Matrix Analyzer
+# 1D Stiffness Matrix Analyser
 
 [![Launch in Browser](https://img.shields.io/badge/Launch-Browser%20App-blue)](https://gwb2025.github.io/Stiffness-Matrix-Generator/)
 
-A web-based tool for generating and analyzing 1D stiffness matrices for systems of springs. This application is designed for engineers and students to quickly assemble and solve simple structural analysis problems.
+A web-based tool for generating and analysing 1D stiffness matrices for systems of springs. This application is designed for engineers and students to quickly assemble and solve simple structural analysis problems.
 
 ## Key Features
 
@@ -17,14 +17,24 @@ A web-based tool for generating and analyzing 1D stiffness matrices for systems 
     *   Calculates **Reaction Forces** (`R`) at fixed nodes.
     *   Calculates internal **Element Forces** (`f`).
     *   Calculates **Element Stresses** (`σ`).
-*   **Visualization Tools**:
+*   **Visualisation Tools**:
     *   **System Diagram**: Generates a 2D diagram of the node/element layout, including boundary conditions and forces.
     *   **Matrix Construction Helper**: Provides a step-by-step walkthrough of how the global stiffness matrix is assembled from individual elements.
 *   **LaTeX Export**:
     *   Export the Global Stiffness Matrix or the Inverse Reduced Matrix as a LaTeX code snippet.
     *   Generate a comprehensive **Analysis Summary** in LaTeX format, including all inputs and calculated results.
-*   **Example Problems**: Load pre-defined example problems to quickly get started.
+*   **Example Problems**: Load predefined example problems to quickly get started.
 *   **Persistent State**: Your setup is automatically saved in your browser's local storage, so you can pick up where you left off.
+
+### Cook et al. Cantilever Example
+
+The Cook et al. preset replicates the textbook cantilever made of three axial segments with varying lengths and areas:
+
+*   **Bar 1**: \(L_1 = 1.5\,\mathrm{m}\), \(A_1 = 2.0 \times 10^{-4}\,\mathrm{m}^2\)
+*   **Bar 2**: \(L_2 = 1.0\,\mathrm{m}\), \(A_2 = 1.5 \times 10^{-4}\,\mathrm{m}^2\)
+*   **Bar 3**: \(L_3 = 0.5\,\mathrm{m}\), \(A_3 = 1.0 \times 10^{-4}\,\mathrm{m}^2\)
+
+Nodes 1–3 are arranged sequentially with the left end fixed, and a 50 kN tip load acts downward at Node 4. The preset uses the same data quoted in Cook et al., *Concepts and Applications of Finite Element Analysis* (4th ed., Chapter 2). Launching “Cook Cantilever” from the presets menu configures the mesh, boundary condition, force vector, and displays the accompanying equivalent-spring diagram for quick verification.
 
 ## How to Use
 
@@ -32,7 +42,7 @@ A web-based tool for generating and analyzing 1D stiffness matrices for systems 
 2.  **Define Elements**: Click "Add Element" to create a new spring. For each element, define its label, which nodes it connects, and its physical properties (Area, Length). You can either input the stiffness `k` directly or check the "Calc k" box to have it computed for you.
 3.  **Set Boundary Conditions**: In the "Boundary Conditions" section, check the boxes corresponding to any nodes that are fixed (i.e., have zero displacement).
 4.  **Apply Forces**: In the "Applied Forces" section, enter any external forces applied at each node.
-5.  **Analyze**: Use the action buttons to perform calculations in sequence:
+5.  **Analyse**: Use the action buttons to perform calculations in sequence:
     *   `Generate Stiffness Matrix`
     *   `Invert Matrix`
     *   `Calculate Displacements`
@@ -50,3 +60,11 @@ No external frameworks or libraries are used for the core application logic, ens
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a pull request or open an issue for any bugs or feature requests.
+
+## Testing
+
+Use Node.js v18+ (the repo was verified with v22). Run the automated calculations tests with:
+
+```bash
+node --test tests/*.test.js
+```
