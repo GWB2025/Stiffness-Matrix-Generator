@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadExample1Btn = document.getElementById('load-example-1-btn');
     const loadExample3Btn = document.getElementById('load-example-3-btn');
     const activity23Btn = document.getElementById('activity-2-3-btn');
+    const loadExampleCookBtn = document.getElementById('load-example-cook-btn');
+    const loadExampleMoaveniBtn = document.getElementById('load-example-moaveni-btn');
     const clearAppBtn = document.getElementById('clear-app-btn');
     const matrixContainer = document.getElementById('matrix-container');
     const inverseMatrixContainer = document.getElementById('inverse-matrix-container');
@@ -38,6 +40,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const calculateElementForcesBtn = document.getElementById('calculate-element-forces-btn');
     const elementForcesContainer = document.getElementById('element-forces-container');
+    const exportJsonBtn = document.getElementById('export-json-btn');
+    const importJsonBtn = document.getElementById('import-json-btn');
+    const importJsonInput = document.getElementById('import-json-input');
+
+    const CalculationsModule = window.Calculations;
+    if (!CalculationsModule) {
+        throw new Error('Calculations module failed to load.');
+    }
+    const {
+        assembleGlobalStiffnessMatrix,
+        getDeterminant,
+        invertMatrix,
+        buildReducedMatrix,
+        computeDisplacements,
+        calculateElementForces: calculateElementForcesCore,
+        calculateElementStresses: calculateElementStressesCore
+    } = CalculationsModule;
 
     let elementCount = 0;
     let globalStiffnessMatrix = []; // Unscaled
@@ -46,6 +65,77 @@ document.addEventListener('DOMContentLoaded', () => {
     let elementStressesResult = [];
     let elementForcesResult = [];
     let matrixForExport = { K: null, invK: null, kHeaders: null, invKHeaders: null, kMultiplierHtml: '', invKMultiplierHtml: '', kNumericMultiplier: 1, invKNumericMultiplier: 1 };
+    const calculationState = { matrixDirty: true, inverseDirty: true, displacementsDirty: true };
+
+    const flashTarget = (element) => {
+        if (!element) return;
+        element.classList.remove('is-updated');
+        void element.offsetWidth;
+        element.classList.add('is-updated');
+    };
+
+    const updateActionButtonStates = () => {
+        if (calculateStressesBtn) {
+            calculateStressesBtn.disabled = calculationState.displacementsDirty;
+            calculateStressesBtn.title = calculationState.displacementsDirty
+                ? 'Calculate displacements before evaluating stresses.'
+                : 'Calculate the stress within each element.';
+        }
+        if (calculateElementForcesBtn) {
+            calculateElementForcesBtn.disabled = calculationState.displacementsDirty;
+            calculateElementForcesBtn.title = calculationState.displacementsDirty
+                ? 'Calculate displacements before evaluating element forces.'
+                : 'Calculate the internal force within each element.';
+        }
+    };
+
+    const clearDisplacementResults = () => {
+        displacementsContainer.innerHTML = '';
+        reactionForcesContainer.innerHTML = '';
+        stressesContainer.innerHTML = '';
+        elementForcesContainer.innerHTML = '';
+        fullDisplacementVector = [];
+        reactionForcesResult = [];
+        elementStressesResult = [];
+        elementForcesResult = [];
+    };
+
+    const markDisplacementsDirty = () => {
+        if (!calculationState.displacementsDirty) {
+            clearDisplacementResults();
+        }
+        calculationState.displacementsDirty = true;
+        updateActionButtonStates();
+    };
+
+    const markInverseDirty = () => {
+        if (!calculationState.inverseDirty) {
+            inverseMatrixContainer.innerHTML = '';
+            inverseMatrixMultiplier.innerHTML = '';
+            matrixForExport.invK = null;
+            matrixForExport.invKHeaders = null;
+            matrixForExport.invKMultiplierHtml = '';
+            matrixForExport.invKNumericMultiplier = 1;
+        }
+        calculationState.inverseDirty = true;
+        markDisplacementsDirty();
+    };
+
+    const markMatrixDirty = () => {
+        if (!calculationState.matrixDirty) {
+            matrixContainer.innerHTML = '';
+            globalMatrixMultiplier.innerHTML = '';
+            matrixForExport.K = null;
+            matrixForExport.kHeaders = null;
+            matrixForExport.kMultiplierHtml = '';
+            matrixForExport.kNumericMultiplier = 1;
+            globalStiffnessMatrix = [];
+        }
+        calculationState.matrixDirty = true;
+        markInverseDirty();
+    };
+
+    updateActionButtonStates();
 
     // --- HELPER FUNCTIONS ---
 
@@ -169,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- STATE MANAGEMENT & UI ---
 
-    const saveState = () => {
+    const buildStateFromUI = () => {
         const elements = Array.from(elementsContainer.querySelectorAll('.element-row')).map(row => ({
             label: row.querySelector('.element-label-input').value,
             node1: row.querySelector('.node1').value,
@@ -184,30 +274,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const state = { 
             numNodes: numNodesInput.value, 
             globalMultiplier: globalMultiplierInput.value, 
-            youngsModulus: document.getElementById('youngs-modulus').value,
+            youngsModulus: youngsModulusInput.value,
             decimalPlaces: decimalPlacesInput.value, 
             elements, 
             fixedNodes, 
             forces 
         };
-        localStorage.setItem('stiffnessMatrixState', JSON.stringify(state));
+        return state;
     };
 
-    const loadState = () => {
-        const savedState = localStorage.getItem('stiffnessMatrixState');
-        if (!savedState) {
-            resetAppToDefault(false);
+    const saveState = () => {
+        const state = buildStateFromUI();
+        localStorage.setItem('stiffnessMatrixState', JSON.stringify(state));
+        return state;
+    };
+
+    const applyStateToUI = (state, { persist = false } = {}) => {
+        if (!state) {
+            resetAppToDefault(persist);
             return;
         }
         try {
-            const state = JSON.parse(savedState);
             numNodesInput.value = state.numNodes || 2;
             globalMultiplierInput.value = state.globalMultiplier || 1;
-            document.getElementById('youngs-modulus').value = state.youngsModulus || '210e9';
+            youngsModulusInput.value = state.youngsModulus || '210e9';
             decimalPlacesInput.value = state.decimalPlaces || 4;
 
-            // Clear existing elements before loading
             elementsContainer.innerHTML = '';
+            elementCount = 0;
+
             if (state.elements && state.elements.length > 0) {
                 state.elements.forEach(el => {
                     const newRow = addElementRow(el.node1, el.node2, el.stiffness, el.area, el.label, el.length);
@@ -219,17 +314,66 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             } else {
-                // If no elements saved, add a default one for a fresh start
                 addElementRow();
             }
 
             generateBoundaryConditionsUI(parseInt(numNodesInput.value), state.fixedNodes);
             generateForcesUI(parseInt(numNodesInput.value), state.forces);
 
+            markMatrixDirty();
+
+            if (persist) {
+                saveState();
+            }
+        } catch (error) {
+            console.error("Failed to apply state.", error);
+            throw error;
+        }
+    };
+
+    const loadState = () => {
+        const savedState = localStorage.getItem('stiffnessMatrixState');
+        if (!savedState) {
+            resetAppToDefault(false);
+            return;
+        }
+        try {
+            const state = JSON.parse(savedState);
+            applyStateToUI(state);
         } catch (error) {
             console.error("Failed to load saved state, resetting to default.", error);
             localStorage.removeItem('stiffnessMatrixState');
             resetAppToDefault(false);
+        }
+    };
+
+    const exportStateAsJson = () => {
+        const state = buildStateFromUI();
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `stiffness-matrix-state-${timestamp}.json`;
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const importStateFromContent = (content) => {
+        try {
+            const parsed = JSON.parse(content);
+            if (!parsed || typeof parsed !== 'object') {
+                alert('Invalid JSON structure.');
+                return;
+            }
+            applyStateToUI(parsed, { persist: true });
+            alert('State imported. Regenerate matrices to continue.');
+        } catch (error) {
+            console.error('Failed to import state:', error);
+            alert('Failed to import state. Please ensure the JSON file is valid.');
         }
     };
 
@@ -239,6 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('youngs-modulus').value = '210e9';
         decimalPlacesInput.value = 4;
         elementsContainer.innerHTML = ''; // Clear all elements
+        elementCount = 0;
         generateBoundaryConditionsUI(2);
         generateForcesUI(2);
         matrixContainer.innerHTML = '';
@@ -257,6 +402,8 @@ document.addEventListener('DOMContentLoaded', () => {
         elementForcesResult = [];
         matrixForExport = { K: null, invK: null, kHeaders: null, invKHeaders: null, kMultiplierHtml: '', invKMultiplierHtml: '', kNumericMultiplier: 1, invKNumericMultiplier: 1 };
 
+        markMatrixDirty();
+
         if (shouldSave) {
             saveState();
         }
@@ -273,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
             item.innerHTML = `<input type="checkbox" id="fixed-node-${i}" ${isChecked ? 'checked' : ''} title="Tick to fix this node, preventing any displacement."><label for="fixed-node-${i}">Node ${i}</label>`;
             fixedNodesContainer.appendChild(item);
         }
+        flashTarget(fixedNodesContainer);
     };
 
     const generateForcesUI = (numNodes, forceValues = []) => {
@@ -284,6 +432,58 @@ document.addEventListener('DOMContentLoaded', () => {
             item.innerHTML = `<label for="force-${i}">F<sub>${i}</sub>:</label><input type="number" id="force-${i}" value="${value}" title="Enter the external force applied at this node.">`;
             forcesContainer.appendChild(item);
         }
+        flashTarget(forcesContainer);
+    };
+
+    const loadCustomExample = (config) => {
+        if (!config) return;
+        const {
+            numNodes,
+            globalMultiplier = 1,
+            decimalPlaces = 4,
+            elements = [],
+            fixedNodes = [],
+            forces = [],
+            autoGenerateMatrix = true
+        } = config;
+
+        numNodesInput.value = numNodes;
+        globalMultiplierInput.value = globalMultiplier;
+        decimalPlacesInput.value = decimalPlaces;
+
+        elementsContainer.innerHTML = '';
+        elementCount = 0;
+        elements.forEach(el => {
+            addElementRow(
+                el.node1 ?? 1,
+                el.node2 ?? 2,
+                el.stiffness ?? 1,
+                el.area ?? 1,
+                el.label ?? '',
+                el.length ?? 1
+            );
+        });
+
+        generateBoundaryConditionsUI(numNodes, fixedNodes);
+        generateForcesUI(numNodes, Array.from({ length: numNodes }, (_, idx) => forces[idx] || 0));
+
+        markMatrixDirty();
+        saveState();
+
+        if (autoGenerateMatrix) {
+            generateAndDisplayMatrix();
+        }
+    };
+
+    const collectElementsData = () => {
+        return Array.from(elementsContainer.querySelectorAll('.element-row')).map((row, index) => ({
+            label: row.querySelector('.element-label-input').value || `Element ${index + 1}`,
+            node1: parseInt(row.querySelector('.node1').value, 10),
+            node2: parseInt(row.querySelector('.node2').value, 10),
+            stiffness: parseFloat(row.querySelector('.stiffness-input').value),
+            area: parseFloat(row.querySelector('.area-input').value),
+            length: parseFloat(row.querySelector('.length-input').value)
+        }));
     };
 
 
@@ -291,9 +491,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const addElementRow = (node1 = 1, node2 = 2, stiffness = 1, area = 1, label = '', length = 1) => {
         elementCount++;
         const elementRow = document.createElement('div');
-        elementRow.classList.add('element-row');
+        elementRow.classList.add('element-row', 'flash-target');
         elementRow.setAttribute('id', `element-${elementCount}`);
         elementRow.innerHTML = `
+            <div class="element-card-header">
+                <div class="element-card-title">
+                    <span class="eyebrow">Element</span>
+                    <strong>#${elementCount}</strong>
+                </div>
+                <button type="button" class="btn btn--ghost remove-element-btn" title="Remove this element from the system.">Remove</button>
+            </div>
             <div class="element-main-inputs">
                 <div class="element-row-top">
                     <div class="element-input-group label-group">
@@ -330,11 +537,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             </div>
-            <div class="element-actions">
-                <button type="button" class="remove-element-btn" title="Remove this element from the system.">Remove</button>
-            </div>
         `;
         elementsContainer.appendChild(elementRow);
+        flashTarget(elementRow);
 
         // --- Auto-calculation logic for the new row ---
         const youngsModulusInput = document.getElementById('youngs-modulus');
@@ -371,6 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elementRow.querySelector('.remove-element-btn').addEventListener('click', () => {
             elementRow.remove();
             saveState();
+            markMatrixDirty();
         });
 
         // Add event listeners for node inputs to update max attribute
@@ -416,40 +622,24 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Please enter a valid number of nodes (between 2 and 10).');
             return false;
         }
-        const K = Array(numNodes).fill(0).map(() => Array(numNodes).fill(0).map(() => 0));
-        const elementRows = elementsContainer.querySelectorAll('.element-row');
-        let isValid = true;
-        elementRows.forEach(row => {
-            const stiffness = parseFloat(row.querySelector('.stiffness-input').value);
-            const nodeId1 = parseInt(row.querySelector('.node1').value);
-            const nodeId2 = parseInt(row.querySelector('.node2').value);
-
-            if (isNaN(stiffness) || stiffness <= 0) {
-                if (isValid) alert('Invalid input for an element. Stiffness must be a positive number.');
-                isValid = false;
-                return;
-            }
-            if (isNaN(nodeId1) || isNaN(nodeId2) || nodeId1 < 1 || nodeId2 < 1 || nodeId1 > numNodes || nodeId2 > numNodes || nodeId1 === nodeId2) {
-                if (isValid) alert(`Invalid node IDs for an element. Nodes must be between 1 and ${numNodes} and different.`);
-                isValid = false;
-                return;
-            }
-
-            const i = nodeId1 - 1;
-            const j = nodeId2 - 1;
-            K[i][i] += stiffness;
-            K[j][j] += stiffness;
-            K[i][j] -= stiffness;
-            K[j][i] -= stiffness;
-        });
-        if (isValid) {
+        const elements = collectElementsData();
+        if (elements.length === 0) {
+            alert('Please add at least one element.');
+            return false;
+        }
+        try {
+            const K = assembleGlobalStiffnessMatrix(numNodes, elements);
             globalStiffnessMatrix = K;
+            calculationState.matrixDirty = false;
+            updateActionButtonStates();
             const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
             const multiplierText = formatMultiplier(globalMultiplier);
             displayMatrix(K, 'matrix-container', 'k-title', 'Global Stiffness Matrix (K)', null, multiplierText, 'global-matrix-multiplier', globalMultiplier);
             return true;
+        } catch (error) {
+            alert(error.message);
+            return false;
         }
-        return false;
     };
 
     const displayMatrix = (matrix, containerId, titleContainerId, title, headers, multiplierHtml, multiplierContainerId, numericMultiplierValue) => {
@@ -460,6 +650,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (multiplierContainer) multiplierContainer.innerHTML = multiplierHtml || '';
         if (!matrix || matrix.length === 0) {
             container.innerHTML = '<p>Matrix is empty or not generated.</p>';
+            flashTarget(container);
+            if (multiplierContainer) {
+                multiplierContainer.innerHTML = '';
+            }
             return;
         }
         let tableHTML = '<table><thead><tr><th></th>';
@@ -482,6 +676,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         tableHTML += '</tbody></table>';
         container.innerHTML = tableHTML;
+        flashTarget(container);
+        if (multiplierContainer) {
+            flashTarget(multiplierContainer);
+        }
 
         // Store data for export
         if (containerId === 'matrix-container') {
@@ -497,44 +695,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- MATRIX MATH ---
-
-    const getDeterminant = (m) => {
-        if (m.length === 0) return 1;
-        if (m.length === 1) return m[0][0];
-        if (m.length === 2) return m[0][0] * m[1][1] - m[0][1] * m[1][0];
-        let det = 0;
-        for (let j = 0; j < m.length; j++) {
-            const minor = m.slice(1).map(row => row.filter((_, colIndex) => colIndex !== j));
-            det += m[0][j] * Math.pow(-1, j) * getDeterminant(minor);
-        }
-        return det;
-    };
-
-    const invertMatrix = (m) => {
-        const size = m.length;
-        if (size === 0) return [];
-        const identity = Array(size).fill(0).map((_, i) => Array(size).fill(0).map((__, j) => (i === j ? 1 : 0)));
-        const augmented = m.map((row, i) => [...row, ...identity[i]]);
-        for (let i = 0; i < size; i++) {
-            let pivot = i;
-            while (pivot < size && Math.abs(augmented[pivot][i]) < 1e-9) pivot++;
-            if (pivot === size) return null;
-            [augmented[i], augmented[pivot]] = [augmented[pivot], augmented[i]];
-            const divisor = augmented[i][i];
-            for (let j = i; j < 2 * size; j++) augmented[i][j] /= divisor;
-            for (let k = 0; k < size; k++) {
-                if (k !== i) {
-                    const factor = augmented[k][i];
-                    for (let j = i; j < 2 * size; j++) augmented[k][j] -= factor * augmented[i][j];
-                }
-            }
-        }
-        return augmented.map(row => row.slice(size));
-    };
-
     const getInvertedReducedMatrix = () => {
-        if (!generateAndDisplayMatrix()) return null;
+        if (calculationState.matrixDirty) {
+            const generated = generateAndDisplayMatrix();
+            if (!generated) return null;
+        }
         const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
         const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
         const freeNodesIndices = fixedNodes.map((isFixed, i) => (isFixed ? -1 : i)).filter(i => i !== -1);
@@ -542,16 +707,52 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Cannot invert: No free nodes. Please unfix at least one node.');
             return null;
         }
-        const reducedK = freeNodesIndices.map(i => freeNodesIndices.map(j => globalStiffnessMatrix[i][j] * globalMultiplier));
+        const reducedK = buildReducedMatrix(globalStiffnessMatrix, freeNodesIndices, globalMultiplier);
         const det = getDeterminant(reducedK);
         if (Math.abs(det) < 1e-9) {
             alert('The reduced matrix is singular and cannot be inverted. Please check your boundary conditions.');
             inverseMatrixContainer.innerHTML = '<p>The reduced matrix is singular (determinant is zero).</p>';
             inverseMatrixMultiplier.innerHTML = '';
+            flashTarget(inverseMatrixContainer);
+            flashTarget(inverseMatrixMultiplier);
             return null;
         }
         const invertedK = invertMatrix(reducedK);
+        if (!invertedK) {
+            alert('The reduced matrix could not be inverted. Please check your inputs.');
+            return null;
+        }
+        calculationState.inverseDirty = false;
+        updateActionButtonStates();
         return { invertedK, freeNodesIndices, globalMultiplier };
+    };
+
+    const exampleScenarios = {
+        cookCantilever: {
+            numNodes: 4,
+            globalMultiplier: 1,
+            decimalPlaces: 4,
+            elements: [
+                { node1: 1, node2: 2, area: 2e-4, length: 1.5, stiffness: 28000000, label: 'Bar 1' },
+                { node1: 2, node2: 3, area: 1.5e-4, length: 1.0, stiffness: 31500000, label: 'Bar 2' },
+                { node1: 3, node2: 4, area: 1e-4, length: 0.5, stiffness: 42000000, label: 'Bar 3' }
+            ],
+            fixedNodes: [true, false, false, false],
+            forces: [0, 0, 0, -50000]
+        },
+        moaveniParallel: {
+            numNodes: 4,
+            globalMultiplier: 1,
+            decimalPlaces: 4,
+            elements: [
+                { node1: 1, node2: 2, area: 1.2e-4, length: 1.0, stiffness: 25200000, label: 'Segment 1' },
+                { node1: 2, node2: 3, area: 1.0e-4, length: 0.8, stiffness: 26250000, label: 'Segment 2A' },
+                { node1: 2, node2: 3, area: 0.6e-4, length: 0.8, stiffness: 15750000, label: 'Segment 2B' },
+                { node1: 3, node2: 4, area: 0.8e-4, length: 0.9, stiffness: 18666666.6667, label: 'Segment 3' }
+            ],
+            fixedNodes: [true, false, false, false],
+            forces: [0, 0, 0, -40000]
+        }
     };
 
     // --- EVENT LISTENERS ---
@@ -561,12 +762,52 @@ document.addEventListener('DOMContentLoaded', () => {
         generateBoundaryConditionsUI(numNodes);
         generateForcesUI(numNodes);
         saveState();
+        markMatrixDirty();
     });
 
     addElementBtn.addEventListener('click', () => {
         addElementRow();
         saveState();
+        markMatrixDirty();
     });
+
+    fixedNodesContainer.addEventListener('change', () => {
+        saveState();
+        markMatrixDirty();
+    });
+
+    forcesContainer.addEventListener('input', () => {
+        saveState();
+        markDisplacementsDirty();
+    });
+
+    elementsContainer.addEventListener('input', (event) => {
+        if (!event.target.closest('.element-row')) return;
+        saveState();
+        markMatrixDirty();
+    });
+
+    if (exportJsonBtn) {
+        exportJsonBtn.addEventListener('click', exportStateAsJson);
+    }
+
+    if (importJsonBtn && importJsonInput) {
+        importJsonBtn.addEventListener('click', () => importJsonInput.click());
+        importJsonInput.addEventListener('change', (event) => {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                importStateFromContent(reader.result);
+                importJsonInput.value = '';
+            };
+            reader.onerror = () => {
+                alert('Failed to read the selected file.');
+                importJsonInput.value = '';
+            };
+            reader.readAsText(file);
+        });
+    }
 
     generateMatrixBtn.addEventListener('click', generateAndDisplayMatrix);
 
@@ -591,16 +832,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const result = getInvertedReducedMatrix();
         if (!result) return;
-        const { invertedK, freeNodesIndices } = result;
+        const { invertedK, freeNodesIndices, globalMultiplier } = result;
         const allForces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
-        const freeForces = freeNodesIndices.map(i => allForces[i]);
-        const displacements = freeNodesIndices.map((_, i) => {
-            let d = 0;
-            for (let j = 0; j < freeForces.length; j++) {
-                d += invertedK[i][j] * freeForces[j];
-            }
-            return d;
-        });
+        let displacementResult;
+        try {
+            displacementResult = computeDisplacements({
+                invertedReducedMatrix: invertedK,
+                freeNodesIndices,
+                forces: allForces,
+                globalMatrix: globalStiffnessMatrix,
+                globalMultiplier
+            });
+        } catch (error) {
+            alert(error.message);
+            return;
+        }
+        const { displacements, fullDisplacementVector: newFullDisplacements, reactionForces } = displacementResult;
         let tableHTML = '<table><thead><tr><th>Node</th><th>Displacement (d)</th></tr></thead><tbody>';
         freeNodesIndices.forEach((nodeIndex, i) => {
             const { value: dispValue, exponent: dispExponent } = formatEngineeringNotation(displacements[i], parseInt(decimalPlacesInput.value));
@@ -608,28 +855,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         tableHTML += '</tbody></table>';
         displacementsContainer.innerHTML = tableHTML;
+        flashTarget(displacementsContainer);
 
         // --- REACTION FORCE CALCULATION ---
         const numNodes = parseInt(numNodesInput.value);
         const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
         const fixedNodesIndices = fixedNodes.map((isFixed, i) => (isFixed ? i : -1)).filter(i => i !== -1);
 
-        fullDisplacementVector = Array(numNodes).fill(0);
-        freeNodesIndices.forEach((nodeIndex, i) => {
-            fullDisplacementVector[nodeIndex] = displacements[i];
-        });
-
-        const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
-        const scaledGlobalK = globalStiffnessMatrix.map(row => row.map(val => val * globalMultiplier));
-
-        const k_times_d = Array(numNodes).fill(0);
-        for (let i = 0; i < numNodes; i++) {
-            for (let j = 0; j < numNodes; j++) {
-                k_times_d[i] += scaledGlobalK[i][j] * fullDisplacementVector[j];
-            }
-        }
-
-        const reactionForces = k_times_d.map((val, i) => val - allForces[i]);
+        fullDisplacementVector = newFullDisplacements;
 
         let reactionTableHTML = '<table><thead><tr><th>Node</th><th>Reaction Force (R)</th></tr></thead><tbody>';
         if (fixedNodesIndices.length > 0) {
@@ -644,6 +877,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         reactionTableHTML += '</tbody></table>';
         reactionForcesContainer.innerHTML = reactionTableHTML;
+        flashTarget(reactionForcesContainer);
+        calculationState.displacementsDirty = false;
+        updateActionButtonStates();
     });
 
     loadExample1Btn.addEventListener('click', () => {
@@ -659,7 +895,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         generateBoundaryConditionsUI(5, [true, false, false, false, true]); // Fixed nodes 1 and 5
         generateForcesUI(5, [0, 0, 10000, 0, 0]); // Force at node 3
-
+        markMatrixDirty();
         generateAndDisplayMatrix(); // Generate and display the matrix from the elements
         saveState();
 
@@ -673,6 +909,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         modal.style.display = 'flex'; // Show the modal
     });
+
+    if (loadExampleCookBtn) {
+        loadExampleCookBtn.addEventListener('click', () => {
+            loadCustomExample(exampleScenarios.cookCantilever);
+
+            // Show modal with Cook et al. equivalent spring diagram
+            modalImg.src = 'images/cook_example.svg';
+            modalImg.alt = 'Cook et al. Cantilever Diagram';
+            const modalContent = document.querySelector('.modal-content');
+            if (modalContent.resetDragPosition) {
+                modalContent.resetDragPosition();
+            }
+            modal.style.display = 'flex';
+        });
+    }
+
+    if (loadExampleMoaveniBtn) {
+        loadExampleMoaveniBtn.addEventListener('click', () => {
+            loadCustomExample(exampleScenarios.moaveniParallel);
+        });
+    }
 
     loadExample3Btn.addEventListener('click', () => {
         numNodesInput.value = 5;
@@ -689,7 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         generateBoundaryConditionsUI(5, [true, false, false, false, true]); // Fixed nodes 1 and 5
         generateForcesUI(5, [0, 100, 0, 100, 0]); // F2=100, F4=100
-
+        markMatrixDirty();
         generateAndDisplayMatrix();
         saveState();
         
@@ -721,7 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             generateBoundaryConditionsUI(5, [true, false, false, false, true]); // Fixed nodes 1 and 5
             generateForcesUI(5, [0, 0, -1000, 0, 0]); // F3=-1000
-
+            markMatrixDirty();
             generateAndDisplayMatrix();
             saveState();
         });
@@ -729,8 +986,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     clearAppBtn.addEventListener('click', () => resetAppToDefault(true));
 
-    inputSection.addEventListener('input', saveState);
-    globalMultiplierInput.addEventListener('input', saveState);
+    inputSection.addEventListener('input', (event) => {
+        saveState();
+        if (!event.target) return;
+        if (event.target.id === 'decimal-places') {
+            return;
+        }
+        if (event.target.id === 'global-multiplier' || event.target.id === 'youngs-modulus') {
+            markMatrixDirty();
+        }
+    });
+
     decimalPlacesInput.addEventListener('input', saveState);
 
     const formatMatrixForDisplay = (matrix, highlightIndices = []) => {
@@ -1037,29 +1303,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Please calculate displacements first.');
                 return;
             }
-            elementStressesResult = []; // Clear previous results
 
             const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
-            const elementRows = elementsContainer.querySelectorAll('.element-row');
-            const stresses = [];
-            elementRows.forEach((row, i) => {
-                const label = row.querySelector('.element-label-input').value || `Element ${i + 1}`;
-                const stiffness_unscaled = parseFloat(row.querySelector('.stiffness-input').value);
-                const area = parseFloat(row.querySelector('.area-input').value);
-                if (isNaN(stiffness_unscaled) || isNaN(area) || area === 0) {
-                    stresses.push(NaN); // Invalid input
-                    elementStressesResult.push({ label: label, stress: NaN });
-                    return;
-                }
-                const stiffness_scaled = stiffness_unscaled * globalMultiplier;
-                const nodeId1 = parseInt(row.querySelectorAll('.node-input')[0].value);
-                const nodeId2 = parseInt(row.querySelectorAll('.node-input')[1].value);
-                const d1 = fullDisplacementVector[nodeId1 - 1];
-                const d2 = fullDisplacementVector[nodeId2 - 1];
-                const stress = (stiffness_scaled / area) * (d2 - d1);
-                stresses.push(stress);
-                elementStressesResult.push({ label: label, stress: stress }); // Store result
-            });
+            const elements = collectElementsData();
+            elementStressesResult = calculateElementStressesCore(elements, fullDisplacementVector, globalMultiplier);
 
             let tableHTML = '<table><thead><tr><th>Element</th><th>Stress (σ)</th></tr></thead><tbody>';
             elementStressesResult.forEach(result => {
@@ -1072,6 +1319,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             tableHTML += '</tbody></table>';
             stressesContainer.innerHTML = tableHTML;
+            flashTarget(stressesContainer);
         });
     }
 
@@ -1081,26 +1329,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Please calculate displacements first.');
                 return;
             }
-            elementForcesResult = []; // Clear previous results
 
             const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
-            const elementRows = elementsContainer.querySelectorAll('.element-row');
-            
-            elementRows.forEach((row, i) => {
-                const label = row.querySelector('.element-label-input').value || `Element ${i + 1}`;
-                const stiffness_unscaled = parseFloat(row.querySelector('.stiffness-input').value);
-                if (isNaN(stiffness_unscaled)) {
-                    elementForcesResult.push({ label: label, force: NaN }); // Invalid input
-                    return;
-                }
-                const stiffness_scaled = stiffness_unscaled * globalMultiplier;
-                const nodeId1 = parseInt(row.querySelectorAll('.node-input')[0].value);
-                const nodeId2 = parseInt(row.querySelectorAll('.node-input')[1].value);
-                const d1 = fullDisplacementVector[nodeId1 - 1];
-                const d2 = fullDisplacementVector[nodeId2 - 1];
-                const force = stiffness_scaled * (d2 - d1);
-                elementForcesResult.push({ label: label, force: force }); // Store result
-            });
+            const elements = collectElementsData();
+            elementForcesResult = calculateElementForcesCore(elements, fullDisplacementVector, globalMultiplier);
 
             let tableHTML = '<table><thead><tr><th>Element</th><th>Force (f)</th></tr></thead><tbody>';
             elementForcesResult.forEach(result => {
@@ -1113,6 +1345,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             tableHTML += '</tbody></table>';
             elementForcesContainer.innerHTML = tableHTML;
+            flashTarget(elementForcesContainer);
         });
     }
 
