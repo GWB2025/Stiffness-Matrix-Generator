@@ -1638,6 +1638,8 @@ document.addEventListener('DOMContentLoaded', () => {
             requestedExampleFigures.forEach(fig => {
                 summaryLines.push(`\\begin{figure}[h]\n\\centering\n\\includegraphics[width=0.85\\textwidth]{${formatGraphicPath(fig.src)}}\n\\caption{${escapeLatex(fig.caption)}}\n\\end{figure}\n\n`);
             });
+            const figurePaths = requestedExampleFigures.map(fig => `\\texttt{${escapeLatex(fig.src)}}`).join(', ');
+            summaryLines.push(`\\textit{Reminder: copy ${figurePaths} alongside this \\LaTeX{} file before compiling.}\\par\n\n`);
         } else {
             summaryLines.push(`No Example 2.2 or Example 2.3 illustration was selected during this session.\n\n`);
         }
