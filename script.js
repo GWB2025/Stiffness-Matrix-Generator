@@ -65,6 +65,27 @@ document.addEventListener('DOMContentLoaded', () => {
     let elementStressesResult = [];
     let elementForcesResult = [];
     let matrixForExport = { K: null, invK: null, kHeaders: null, invKHeaders: null, kMultiplierHtml: '', invKMultiplierHtml: '', kNumericMultiplier: 1, invKNumericMultiplier: 1 };
+    const presetIllustrationMetadata = {
+        example22: {
+            key: 'example22',
+            src: 'images/2_2_example.png',
+            caption: 'Example 2.2 reference diagram'
+        },
+        example23: {
+            key: 'example23',
+            src: 'images/2_3_example.png',
+            caption: 'Example 2.3 reference diagram'
+        }
+    };
+    const activePresetIllustrations = new Set();
+    const registerPresetIllustration = (key) => {
+        if (presetIllustrationMetadata[key]) {
+            activePresetIllustrations.add(key);
+        }
+    };
+    const clearPresetIllustrations = () => {
+        activePresetIllustrations.clear();
+    };
     const calculationState = { matrixDirty: true, inverseDirty: true, displacementsDirty: true };
 
     const flashTarget = (element) => {
@@ -175,6 +196,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return { value: (value < 0 ? '-' : '') + formattedValue, exponent: exponent };
     };
 
+    const escapeLatex = (value = '') => {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/\\/g, '\\textbackslash{}')
+            .replace(/([%$&#_{}])/g, '\\$1')
+            .replace(/~/g, '\\textasciitilde{}')
+            .replace(/\^/g, '\\textasciicircum{}');
+    };
+
     const formatEngineeringNotationForLatex = (value, precision = 3, wrapInMathMode = true) => {
         const { value: formattedValue, exponent } = formatEngineeringNotation(value, precision);
 
@@ -233,6 +263,257 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             prompt(`Copy the ${title} below:`, latex);
         }
+    };
+
+    const computeDiagramLayout = ({ alertOnError = false } = {}) => {
+        const numNodes = parseInt(numNodesInput.value, 10);
+        if (!Number.isFinite(numNodes) || numNodes < 2 || numNodes > 10) {
+            const message = 'Please enter a valid number of nodes (between 2 and 10).';
+            if (alertOnError) alert(message);
+            return { error: message, layout: null };
+        }
+
+        const elements = Array.from(elementsContainer.querySelectorAll('.element-row')).map(row => ({
+            node1: parseInt(row.querySelector('.node1').value, 10),
+            node2: parseInt(row.querySelector('.node2').value, 10),
+            label: row.querySelector('.element-label-input').value
+        }));
+
+        const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
+        const forces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
+
+        const adj = Array.from({ length: numNodes + 1 }, () => []);
+        elements.forEach(el => {
+            if (!isNaN(el.node1) && !isNaN(el.node2) && el.node1 !== el.node2) {
+                adj[el.node1].push(el.node2);
+                adj[el.node2].push(el.node1);
+            }
+        });
+
+        const layers = [];
+        const visited = new Set();
+        for (let i = 1; i <= numNodes; i++) {
+            if (!visited.has(i)) {
+                const queue = [[i, 0]];
+                visited.add(i);
+                while (queue.length > 0) {
+                    const [u, layer] = queue.shift();
+                    if (!layers[layer]) layers[layer] = [];
+                    if (!layers[layer].includes(u)) {
+                        layers[layer].push(u);
+                    }
+                    adj[u].forEach(v => {
+                        if (!visited.has(v)) {
+                            visited.add(v);
+                            queue.push([v, layer + 1]);
+                        }
+                    });
+                }
+            }
+        }
+
+        const svgWidth = 700;
+        const svgHeight = 400;
+        const xPadding = 60;
+        const yPadding = 40;
+        const nodeRadius = 15;
+
+        const layerSpacing = layers.length > 1 ? (svgWidth - 2 * xPadding) / (layers.length - 1) : 0;
+        const nodePositions = {};
+
+        layers.forEach((layer, layerIndex) => {
+            const layerHeight = svgHeight - 2 * yPadding;
+            const numNodesInLayer = layer.length;
+            const nodeSpacingY = numNodesInLayer > 1 ? layerHeight / (numNodesInLayer - 1) : layerHeight / 2;
+
+            layer.sort((a, b) => a - b);
+
+            layer.forEach((node, nodeIndexInLayer) => {
+                const x = xPadding + layerIndex * layerSpacing;
+                const y = yPadding + (numNodesInLayer > 1 ? nodeIndexInLayer * nodeSpacingY : nodeSpacingY);
+                nodePositions[node] = { x, y };
+            });
+        });
+
+        const validElements = elements.filter(el =>
+            !isNaN(el.node1) &&
+            !isNaN(el.node2) &&
+            el.node1 !== el.node2 &&
+            nodePositions[el.node1] &&
+            nodePositions[el.node2]
+        );
+
+        const elementCounts = {};
+        validElements.forEach(el => {
+            const n1 = Math.min(el.node1, el.node2);
+            const n2 = Math.max(el.node1, el.node2);
+            const key = `${n1}-${n2}`;
+            if (!elementCounts[key]) {
+                elementCounts[key] = { count: 0, total: 0 };
+            }
+            elementCounts[key].total++;
+        });
+
+        const elementSegments = [];
+        validElements.forEach(el => {
+            const n1 = Math.min(el.node1, el.node2);
+            const n2 = Math.max(el.node1, el.node2);
+            const key = `${n1}-${n2}`;
+            elementCounts[key].count++;
+            const parallelOffset = (elementCounts[key].count - (elementCounts[key].total + 1) / 2) * 15;
+
+            const pos1 = nodePositions[el.node1];
+            const pos2 = nodePositions[el.node2];
+            const dx = pos2.x - pos1.x;
+            const dy = pos2.y - pos1.y;
+            const angle = Math.atan2(dy, dx);
+            const offsetX = parallelOffset * Math.sin(angle);
+            const offsetY = -parallelOffset * Math.cos(angle);
+            const startX = pos1.x + offsetX;
+            const startY = pos1.y + offsetY;
+            const endX = pos2.x + offsetX;
+            const endY = pos2.y + offsetY;
+
+            let labelOffset;
+            if (parallelOffset === 0) {
+                labelOffset = -18;
+            } else {
+                labelOffset = parallelOffset + Math.sign(parallelOffset) * 18;
+            }
+            const labelOffsetX = labelOffset * Math.sin(angle);
+            const labelOffsetY = -labelOffset * Math.cos(angle);
+
+            elementSegments.push({
+                node1: el.node1,
+                node2: el.node2,
+                label: el.label,
+                startX,
+                startY,
+                endX,
+                endY,
+                labelX: (pos1.x + pos2.x) / 2 + labelOffsetX,
+                labelY: (pos1.y + pos2.y) / 2 + labelOffsetY
+            });
+        });
+
+        const arrowLength = 50;
+        const forceSegments = [];
+        forces.forEach((force, index) => {
+            const nodeId = index + 1;
+            if (force === 0 || !nodePositions[nodeId]) return;
+            const pos = nodePositions[nodeId];
+            const isPositive = force > 0;
+            const startX = pos.x + (isPositive ? nodeRadius : -nodeRadius);
+            const endX = startX + (isPositive ? arrowLength : -arrowLength);
+            const labelX = startX + (isPositive ? arrowLength / 2 : -arrowLength / 2);
+            const labelY = pos.y - 10;
+            forceSegments.push({
+                node: nodeId,
+                value: force,
+                startX,
+                startY: pos.y,
+                endX,
+                endY: pos.y,
+                labelX,
+                labelY
+            });
+        });
+
+        return {
+            error: null,
+            layout: {
+                numNodes,
+                svgWidth,
+                svgHeight,
+                nodeRadius,
+                nodePositions,
+                elements: elementSegments,
+                fixedNodes,
+                forces: forceSegments
+            }
+        };
+    };
+
+    const renderDiagramSvg = (layout) => {
+        if (!layout) return '';
+        const { svgWidth, svgHeight, nodeRadius, nodePositions, elements, fixedNodes, forces } = layout;
+        let svg = `<svg width="${svgWidth}" height="${svgHeight}" style="font-family: sans-serif;">`;
+        svg += `
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#c0392b">
+                    <polygon points="0 0, 10 3.5, 0 7" />
+                </marker>
+            </defs>
+        `;
+
+        elements.forEach(segment => {
+            svg += `<line x1="${segment.startX}" y1="${segment.startY}" x2="${segment.endX}" y2="${segment.endY}" stroke="#34495e" stroke-width="2"/>`;
+            if (segment.label) {
+                svg += `<text x="${segment.labelX}" y="${segment.labelY}" text-anchor="middle" font-size="12" fill="#e67e22">${segment.label}</text>`;
+            }
+        });
+
+        Object.keys(nodePositions).forEach(nodeId => {
+            const pos = nodePositions[nodeId];
+            svg += `<circle cx="${pos.x}" cy="${pos.y}" r="${nodeRadius}" fill="#3498db" stroke="#2980b9" stroke-width="2"/>`;
+            svg += `<text x="${pos.x}" y="${pos.y}" text-anchor="middle" dy=".3em" fill="white" font-weight="bold">${nodeId}</text>`;
+        });
+
+        fixedNodes.forEach((isFixed, i) => {
+            const nodeId = i + 1;
+            if (isFixed && nodePositions[nodeId]) {
+                const pos = nodePositions[nodeId];
+                const supportSize = 20;
+                svg += `<path d="M ${pos.x} ${pos.y} l ${-supportSize / 2} ${supportSize} h ${supportSize} Z" fill="#95a5a6" />`;
+            }
+        });
+
+        forces.forEach(force => {
+            svg += `<line x1="${force.startX}" y1="${force.startY}" x2="${force.endX}" y2="${force.endY}" stroke="#c0392b" stroke-width="2" marker-end="url(#arrowhead)" />`;
+            svg += `<text x="${force.labelX}" y="${force.labelY}" text-anchor="middle" font-size="12" fill="#c0392b">${force.value}</text>`;
+        });
+
+        svg += '</svg>';
+        return svg;
+    };
+
+    const renderDiagramTikz = (layout, decimalPlaces = 4) => {
+        if (!layout) return '';
+        const tikzScale = 0.02;
+        let tikz = `\\begin{tikzpicture}[x=${tikzScale}cm,y=-${tikzScale}cm,>=Stealth]\n`;
+
+        layout.elements.forEach(segment => {
+            tikz += `    \\draw[line width=1pt,color=black!70] (${segment.startX},${segment.startY}) -- (${segment.endX},${segment.endY});\n`;
+            if (segment.label) {
+                tikz += `    \\node[text=orange!80!black,font=\\scriptsize] at (${segment.labelX},${segment.labelY}){${escapeLatex(segment.label)}};\n`;
+            }
+        });
+
+        Object.keys(layout.nodePositions).forEach(nodeId => {
+            const pos = layout.nodePositions[nodeId];
+            tikz += `    \\filldraw[fill=blue!60,draw=blue!80!black] (${pos.x},${pos.y}) circle (${layout.nodeRadius});\n`;
+            tikz += `    \\node[text=white,font=\\footnotesize] at (${pos.x},${pos.y}){${nodeId}};\n`;
+        });
+
+        layout.fixedNodes.forEach((isFixed, index) => {
+            const nodeId = index + 1;
+            if (!isFixed || !layout.nodePositions[nodeId]) return;
+            const pos = layout.nodePositions[nodeId];
+            const supportSize = 20;
+            const leftX = pos.x - supportSize / 2;
+            const rightX = pos.x + supportSize / 2;
+            const baseY = pos.y + supportSize;
+            tikz += `    \\draw[fill=gray!60,draw=gray!70] (${pos.x},${pos.y}) -- (${leftX},${baseY}) -- (${rightX},${baseY}) -- cycle;\n`;
+        });
+
+        layout.forces.forEach(force => {
+            const formattedForce = formatEngineeringNotationForLatex(force.value, decimalPlaces);
+            tikz += `    \\draw[->,line width=1pt,color=red!70!black] (${force.startX},${force.startY}) -- (${force.endX},${force.endY});\n`;
+            tikz += `    \\node[text=red!70!black,font=\\scriptsize,above] at (${force.labelX},${force.labelY}){${formattedForce}};\n`;
+        });
+
+        tikz += '\\end{tikzpicture}\n';
+        return tikz;
     };
 
     const formatMultiplier = (value, inverse = false) => {
@@ -401,6 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elementStressesResult = [];
         elementForcesResult = [];
         matrixForExport = { K: null, invK: null, kHeaders: null, invKHeaders: null, kMultiplierHtml: '', invKMultiplierHtml: '', kNumericMultiplier: 1, invKNumericMultiplier: 1 };
+        clearPresetIllustrations();
 
         markMatrixDirty();
 
@@ -908,6 +1190,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modalContent.resetDragPosition();
         }
         modal.style.display = 'flex'; // Show the modal
+        registerPresetIllustration('example22');
     });
 
     if (loadExampleCookBtn) {
@@ -960,6 +1243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         modal.style.display = 'flex'; // Show the modal
+        registerPresetIllustration('example23');
     });
 
     if (activity23Btn) {
@@ -1086,184 +1370,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const generateAndShowDiagram = () => {
-        const numNodes = parseInt(numNodesInput.value);
-        if (isNaN(numNodes) || numNodes < 2 || numNodes > 10) {
-            alert('Please enter a valid number of nodes (between 2 and 10).');
-            return;
-        }
-
-        const elements = Array.from(elementsContainer.querySelectorAll('.element-row')).map(row => ({
-            node1: parseInt(row.querySelector('.node1').value),
-            node2: parseInt(row.querySelector('.node2').value),
-            label: row.querySelector('.element-label-input').value,
-        }));
-
-        const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
-        const forces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
-
-        // --- 2D Layout Algorithm ---
-        const adj = Array.from({ length: numNodes + 1 }, () => []);
-        elements.forEach(el => {
-            if (!isNaN(el.node1) && !isNaN(el.node2) && el.node1 !== el.node2) {
-                adj[el.node1].push(el.node2);
-                adj[el.node2].push(el.node1);
-            }
-        });
-        const layers = [];
-        const visited = new Set();
-        for (let i = 1; i <= numNodes; i++) {
-            if (!visited.has(i)) {
-                const queue = [[i, 0]];
-                visited.add(i);
-                while (queue.length > 0) {
-                    const [u, layer] = queue.shift();
-                    if (!layers[layer]) layers[layer] = [];
-                    if (!layers[layer].includes(u)) {
-                        layers[layer].push(u);
-                    }
-                    adj[u].forEach(v => {
-                        if (!visited.has(v)) {
-                            visited.add(v);
-                            queue.push([v, layer + 1]);
-                        }
-                    });
-                }
-            }
-        }
-
-        const svgWidth = 700;
-        const svgHeight = 400;
-        const xPadding = 60;
-        const yPadding = 40;
-        const nodeRadius = 15;
-
-        const layerSpacing = layers.length > 1 ? (svgWidth - 2 * xPadding) / (layers.length - 1) : 0;
-        const nodePositions = {};
-
-        layers.forEach((layer, layerIndex) => {
-            const layerHeight = svgHeight - 2 * yPadding;
-            const numNodesInLayer = layer.length;
-            const nodeSpacingY = numNodesInLayer > 1 ? layerHeight / (numNodesInLayer - 1) : layerHeight / 2;
-            
-            layer.sort((a, b) => a - b); // Sort nodes for consistent layout
-
-            layer.forEach((node, nodeIndexInLayer) => {
-                const x = xPadding + layerIndex * layerSpacing;
-                const y = yPadding + (numNodesInLayer > 1 ? nodeIndexInLayer * nodeSpacingY : nodeSpacingY);
-                nodePositions[node] = { x, y };
-            });
-        });
-
-        // --- SVG Generation ---
-        let svg = `<svg width="${svgWidth}" height="${svgHeight}" style="font-family: sans-serif;">`;
-        
-        // Define arrowhead marker
-        svg += `
-            <defs>
-                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" fill="#c0392b">
-                    <polygon points="0 0, 10 3.5, 0 7" />
-                </marker>
-            </defs>
-        `;
-
-        // --- Draw Elements (Springs) ---
-        const elementCounts = {};
-        elements.forEach(el => {
-            if (isNaN(el.node1) || isNaN(el.node2) || el.node1 === el.node2) return;
-            const n1 = Math.min(el.node1, el.node2);
-            const n2 = Math.max(el.node1, el.node2);
-            const key = `${n1}-${n2}`;
-            if (!elementCounts[key]) elementCounts[key] = { count: 0, total: 0 };
-            elementCounts[key].total++;
-        });
-
-        elements.forEach(el => {
-            if (isNaN(el.node1) || isNaN(el.node2) || !nodePositions[el.node1] || !nodePositions[el.node2] || el.node1 === el.node2) {
-                return; // Skip invalid elements
-            }
-            const n1_key = Math.min(el.node1, el.node2);
-            const n2_key = Math.max(el.node1, el.node2);
-            const key = `${n1_key}-${n2_key}`;
-            
-            elementCounts[key].count++;
-            const parallelOffset = (elementCounts[key].count - (elementCounts[key].total + 1) / 2) * 15;
-
-            const pos1 = nodePositions[el.node1];
-            const pos2 = nodePositions[el.node2];
-
-            const dx = pos2.x - pos1.x;
-            const dy = pos2.y - pos1.y;
-            const angle = Math.atan2(dy, dx);
-            
-            const offsetX = parallelOffset * Math.sin(angle);
-            const offsetY = -parallelOffset * Math.cos(angle);
-
-            const startX = pos1.x + offsetX;
-            const startY = pos1.y + offsetY;
-            const endX = pos2.x + offsetX;
-            const endY = pos2.y + offsetY;
-
-            svg += `<line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="#34495e" stroke-width="2"/>`;
-
-            if (el.label) {
-                const midX = (pos1.x + pos2.x) / 2;
-                const midY = (pos1.y + pos2.y) / 2;
-
-                let labelOffset;
-                if (parallelOffset === 0) {
-                    labelOffset = -18; // Default offset for single lines
-                } else {
-                    labelOffset = parallelOffset + Math.sign(parallelOffset) * 18;
-                }
-                
-                const labelOffsetX = labelOffset * Math.sin(angle);
-                const labelOffsetY = -labelOffset * Math.cos(angle);
-
-                const labelX = midX + labelOffsetX;
-                const labelY = midY + labelOffsetY;
-                svg += `<text x="${labelX}" y="${labelY}" text-anchor="middle" font-size="12" fill="#e67e22">${el.label}</text>`;
-            }
-        });
-
-        // --- Draw Nodes ---
-        Object.keys(nodePositions).forEach(nodeId => {
-            const pos = nodePositions[nodeId];
-            svg += `<circle cx="${pos.x}" cy="${pos.y}" r="${nodeRadius}" fill="#3498db" stroke="#2980b9" stroke-width="2"/>`;
-            svg += `<text x="${pos.x}" y="${pos.y}" text-anchor="middle" dy=".3em" fill="white" font-weight="bold">${nodeId}</text>`;
-        });
-
-        // --- Draw Boundary Conditions ---
-        fixedNodes.forEach((isFixed, i) => {
-            const nodeId = i + 1;
-            if (isFixed && nodePositions[nodeId]) {
-                const pos = nodePositions[nodeId];
-                const supportSize = 20;
-                svg += `<path d="M ${pos.x} ${pos.y} l ${-supportSize/2} ${supportSize} h ${supportSize} Z" fill="#95a5a6" />`;
-            }
-        });
-
-        // --- Draw Forces ---
-        forces.forEach((force, i) => {
-            const nodeId = i + 1;
-            if (force !== 0 && nodePositions[nodeId]) {
-                const pos = nodePositions[nodeId];
-                const isPositive = force > 0;
-                const arrowLength = 50;
-
-                const startX = pos.x + (isPositive ? nodeRadius : -nodeRadius);
-                const endX = startX + (isPositive ? arrowLength : -arrowLength);
-                
-                svg += `<line x1="${startX}" y1="${pos.y}" x2="${endX}" y2="${pos.y}" stroke="#c0392b" stroke-width="2" marker-end="url(#arrowhead)" />`;
-                
-                const labelX = startX + (isPositive ? arrowLength / 2 : -arrowLength / 2);
-                const labelY = pos.y - 10; // Place label 10px above the arrow
-                svg += `<text x="${labelX}" y="${labelY}" text-anchor="middle" font-size="12" fill="#c0392b">${force}</text>`;
-            }
-        });
-
-        svg += '</svg>';
-
-        diagramContainer.innerHTML = svg;
+        const { layout } = computeDiagramLayout({ alertOnError: true });
+        if (!layout) return;
+        const svgMarkup = renderDiagramSvg(layout);
+        diagramContainer.innerHTML = svgMarkup;
         diagramModal.style.display = 'flex';
     };
 
@@ -1351,166 +1461,348 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const generateLatexSummary = () => {
         const btn = document.getElementById('generate-summary-btn');
-        
-        // Visual feedback
-        btn.classList.add('is-flashing');
-        setTimeout(() => {
-            btn.classList.remove('is-flashing');
-        }, 500);
-
-        const decimalPlaces = parseInt(decimalPlacesInput.value);
-        let summary = `% LaTeX Summary from Stiffness Matrix Generator\n`;
-        summary += `% Generated on: ${new Date().toUTCString()}\n\n`;
-
-        // --- 1. Input Summary ---
-        summary += `%\\documentclass{article}\n`;
-        summary += `%\\usepackage{amsmath}\n`;
-        summary += `%\\usepackage{graphicx}\n`;
-        summary += `%\\usepackage{geometry}\n`;
-        summary += `%\\geometry{a4paper, margin=1in}\n\n`;
-        summary += `%\\begin{document}\n\n`;
-        summary += `\\section*{Stiffness Matrix Analysis Summary}\n\n`;
-
-        summary += `\\subsection*{Input Parameters}\n`;
-        summary += `\\begin{itemize}\n`;
-        summary += `    \\item Number of Nodes: ${numNodesInput.value}\n`;
-        summary += `    \\item Young's Modulus (E): ${formatEngineeringNotationForLatex(parseFloat(document.getElementById('youngs-modulus').value), decimalPlaces)}\n`;
-        summary += `    \\item Global Multiplier: ${formatEngineeringNotationForLatex(parseFloat(globalMultiplierInput.value), decimalPlaces)}\n`;
-        summary += `\\end{itemize}\n\n`;
-
-        // Elements Table
-        summary += `\\subsubsection*{Elements}\n`;
-        summary += `\\begin{tabular}{|l|c|c|r|r|r|}\n`;
-        summary += `\\hline\n`;
-        summary += `\\textbf{Label} & \\textbf{Node Left} & \\textbf{Node Right} & \\textbf{Area (A)} & \\textbf{Length (l)} & \\textbf{Stiffness (k)} \\\\\n`;
-        summary += `\\hline\n`;
-        const elementRows = elementsContainer.querySelectorAll('.element-row');
-        if (elementRows.length > 0) {
-            elementRows.forEach(row => {
-                const label = row.querySelector('.element-label-input').value || '-';
-                const node1 = row.querySelector('.node1').value;
-                const node2 = row.querySelector('.node2').value;
-                const area = parseFloat(row.querySelector('.area-input').value);
-                const length = parseFloat(row.querySelector('.length-input').value);
-                const stiffness = parseFloat(row.querySelector('.stiffness-input').value);
-                summary += `${label} & ${node1} & ${node2} & ${formatEngineeringNotationForLatex(area, decimalPlaces)} & ${formatEngineeringNotationForLatex(length, decimalPlaces)} & ${formatEngineeringNotationForLatex(stiffness, decimalPlaces)} \\\\\n`;
-            });
-        } else {
-            summary += `\\multicolumn{6}{|c|}{No elements defined.} \\\\\n`;
+        if (btn) {
+            btn.classList.add('is-flashing');
+            setTimeout(() => btn.classList.remove('is-flashing'), 500);
         }
-        summary += `\\hline\n`;
-        summary += `\\end{tabular}\n\n`;
 
-        // Boundary Conditions
+        const parsedDecimalPlaces = parseInt(decimalPlacesInput.value, 10);
+        const decimalPlaces = Number.isFinite(parsedDecimalPlaces) ? parsedDecimalPlaces : 4;
+        const nodeCount = parseInt(numNodesInput.value, 10) || 0;
+        const youngsValue = youngsModulusInput ? parseFloat(youngsModulusInput.value) : NaN;
+        const globalMultiplierValue = parseFloat(globalMultiplierInput.value);
+        const timestamp = new Date();
+        const timestampDisplay = timestamp.toISOString().replace('T', ' ').replace('Z', ' UTC');
+        const diagramResult = computeDiagramLayout();
+        const diagramLayout = diagramResult.layout;
+        const diagramError = diagramResult.error;
+        const formatGraphicPath = (path) => `\\detokenize{${path}}`;
+        const requestedExampleFigures = [];
+        if (activePresetIllustrations.has('example22')) {
+            requestedExampleFigures.push(presetIllustrationMetadata.example22);
+        }
+        if (activePresetIllustrations.has('example23')) {
+            requestedExampleFigures.push(presetIllustrationMetadata.example23);
+        }
+
+        const elementRows = elementsContainer.querySelectorAll('.element-row');
+        const elementsData = Array.from(elementRows).map((row, index) => {
+            const labelValue = row.querySelector('.element-label-input').value.trim();
+            return {
+                label: labelValue || `Element ${index + 1}`,
+                node1: parseInt(row.querySelector('.node1').value, 10),
+                node2: parseInt(row.querySelector('.node2').value, 10),
+                area: parseFloat(row.querySelector('.area-input').value),
+                length: parseFloat(row.querySelector('.length-input').value),
+                stiffness: parseFloat(row.querySelector('.stiffness-input').value),
+                calculateK: row.querySelector('.calculate-k-checkbox')?.checked || false
+            };
+        });
+
         const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input:checked')).map(cb => cb.id.split('-')[2]);
-        summary += `\\subsubsection*{Boundary Conditions}\n`;
-        summary += `The following nodes are fixed: ${fixedNodes.length > 0 ? fixedNodes.join(', ') : 'None'}.\n\n`;
-
-        // Applied Forces
         const forces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
         const appliedForces = forces.map((f, i) => ({ node: i + 1, force: f })).filter(item => item.force !== 0);
-        summary += `\\subsubsection*{Applied Forces}\n`;
-        if (appliedForces.length > 0) {
-            summary += `\\begin{tabular}{|c|r|}\n`;
-            summary += `\\hline\n`;
-            summary += `\\textbf{Node} & \\textbf{Force (F)} \\\\\n`;
-            summary += `\\hline\n`;
-            appliedForces.forEach(item => {
-                summary += `${item.node} & ${formatEngineeringNotationForLatex(item.force, decimalPlaces)} \\\\\n`;
+        const totalAppliedLoad = appliedForces.length ? appliedForces.reduce((sum, item) => sum + item.force, 0) : null;
+        const totalAbsLoad = appliedForces.length ? appliedForces.reduce((sum, item) => sum + Math.abs(item.force), 0) : null;
+
+        const formatOptionalValue = (value, placeholder = '---') => Number.isFinite(value) ? formatEngineeringNotationForLatex(value, decimalPlaces) : placeholder;
+        const formatList = (items) => {
+            if (items.length === 0) return '';
+            if (items.length === 1) return items[0];
+            if (items.length === 2) return `${items[0]} and ${items[1]}`;
+            return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+        };
+
+        const computedOutputs = [];
+        if (matrixForExport.K) computedOutputs.push('$K$');
+        if (matrixForExport.invK) computedOutputs.push('$K_r^{-1}$');
+        if (fullDisplacementVector.length > 0) computedOutputs.push('$d$');
+        if (reactionForcesResult.length > 0) computedOutputs.push('$R$');
+        if (elementForcesResult.length > 0) computedOutputs.push('$f$');
+        if (elementStressesResult.length > 0) computedOutputs.push('$\\sigma$');
+
+        const autoKCount = elementsData.filter(el => el.calculateK).length;
+        const validLengths = elementsData.map(el => el.length).filter(val => Number.isFinite(val));
+        const validAreas = elementsData.map(el => el.area).filter(val => Number.isFinite(val));
+        const validStiffnesses = elementsData.map(el => el.stiffness).filter(val => Number.isFinite(val));
+        const totalLength = validLengths.length ? validLengths.reduce((sum, val) => sum + val, 0) : null;
+        const shortestLength = validLengths.length ? Math.min(...validLengths) : null;
+        const longestLength = validLengths.length ? Math.max(...validLengths) : null;
+        const minArea = validAreas.length ? Math.min(...validAreas) : null;
+        const maxArea = validAreas.length ? Math.max(...validAreas) : null;
+        const averageStiffness = validStiffnesses.length ? validStiffnesses.reduce((sum, val) => sum + val, 0) / validStiffnesses.length : null;
+
+        const summaryLines = [];
+        summaryLines.push(`% LaTeX Summary from Stiffness Matrix Generator\n`);
+        summaryLines.push(`% Generated on: ${timestamp.toUTCString()}\n\n`);
+        summaryLines.push(`\\documentclass{article}\n`);
+        summaryLines.push(`\\usepackage{amsmath}\n`);
+        summaryLines.push(`\\usepackage{booktabs}\n`);
+        summaryLines.push(`\\usepackage{graphicx}\n`);
+        summaryLines.push(`\\usepackage{tikz}\n`);
+        summaryLines.push(`\\usetikzlibrary{arrows.meta}\n`);
+        summaryLines.push(`\\usepackage{geometry}\n`);
+        summaryLines.push(`\\geometry{a4paper, margin=1in}\n\n`);
+        summaryLines.push(`\\begin{document}\n\n`);
+        summaryLines.push(`\\title{Stiffness Matrix Analysis Summary}\n`);
+        summaryLines.push(`\\author{Stiffness Matrix Generator}\n`);
+        summaryLines.push(`\\date{${escapeLatex(timestampDisplay)}}\n`);
+        summaryLines.push(`\\maketitle\n\n`);
+
+        const fixedNodesText = fixedNodes.length
+            ? `${fixedNodes.length} fixed node${fixedNodes.length === 1 ? '' : 's'}`
+            : 'no prescribed supports';
+        const loadedNodesText = appliedForces.length
+            ? `${appliedForces.length} loaded node${appliedForces.length === 1 ? '' : 's'}`
+            : 'no loaded nodes';
+        const outputsText = computedOutputs.length
+            ? `Computed outputs include ${formatList(computedOutputs)}.`
+            : 'No solver outputs have been generated yet; run the action buttons and regenerate this summary.';
+
+        summaryLines.push(`\\begin{abstract}\n`);
+        summaryLines.push(`Analysis configured for a ${nodeCount}-node system with ${elementsData.length} element${elementsData.length === 1 ? '' : 's'}, ${fixedNodesText}, and ${loadedNodesText}. ${outputsText}\n`);
+        summaryLines.push(`\\end{abstract}\n\n`);
+
+        summaryLines.push(`\\section*{Model Overview}\n`);
+        summaryLines.push(`\\begin{tabular}{@{}ll@{}}\n`);
+        summaryLines.push(`Generated & ${escapeLatex(timestampDisplay)} \\\\\n`);
+        summaryLines.push(`Nodes & ${nodeCount || '---'} \\\\\n`);
+        summaryLines.push(`Elements & ${elementsData.length} \\\\\n`);
+        summaryLines.push(`Fixed Nodes & ${fixedNodes.length ? escapeLatex(fixedNodes.join(', ')) : 'None'} \\\\\n`);
+        summaryLines.push(`Free Degrees of Freedom & ${Math.max(nodeCount - fixedNodes.length, 0)} \\\\\n`);
+        summaryLines.push(`Loaded Nodes & ${appliedForces.length ? escapeLatex(appliedForces.map(f => f.node).join(', ')) : 'None'} \\\\\n`);
+        summaryLines.push(`Net External Load & ${totalAppliedLoad !== null ? formatEngineeringNotationForLatex(totalAppliedLoad, decimalPlaces) : 'N/A'} \\\\\n`);
+        summaryLines.push(`Total Applied |Load| & ${totalAbsLoad !== null ? formatEngineeringNotationForLatex(totalAbsLoad, decimalPlaces) : 'N/A'} \\\\\n`);
+        summaryLines.push(`Decimal Places & ${Number.isFinite(parsedDecimalPlaces) ? parsedDecimalPlaces : 'Default (4)'} \\\\\n`);
+        summaryLines.push(`\\end{tabular}\n\n`);
+
+        summaryLines.push(`\\subsection*{Global Parameters}\n`);
+        summaryLines.push(`\\begin{itemize}\n`);
+        summaryLines.push(`    \\item Number of Nodes: ${nodeCount || '---'}\n`);
+        summaryLines.push(`    \\item Young's Modulus (E): ${formatOptionalValue(youngsValue)}\n`);
+        summaryLines.push(`    \\item Global Multiplier: ${formatOptionalValue(globalMultiplierValue)}\n`);
+        summaryLines.push(`\\end{itemize}\n\n`);
+
+        summaryLines.push(`\\subsection*{Element Inventory}\n`);
+        summaryLines.push(`\\begin{tabular}{|l|c|c|r|r|r|c|}\n`);
+        summaryLines.push(`\\hline\n`);
+        summaryLines.push(`\\textbf{Label} & \\textbf{Node Left} & \\textbf{Node Right} & \\textbf{Area (A)} & \\textbf{Length (l)} & \\textbf{Stiffness (k)} & \\textbf{Source} \\\\\n`);
+        summaryLines.push(`\\hline\n`);
+        if (elementsData.length > 0) {
+            elementsData.forEach(element => {
+                summaryLines.push(`${escapeLatex(element.label)} & ${Number.isFinite(element.node1) ? element.node1 : '--'} & ${Number.isFinite(element.node2) ? element.node2 : '--'} & ${formatOptionalValue(element.area)} & ${formatOptionalValue(element.length)} & ${formatOptionalValue(element.stiffness)} & ${element.calculateK ? '\\textsc{Auto}' : '\\textsc{Manual}'} \\\\\n`);
             });
-            summary += `\\hline\n`;
-            summary += `\\end{tabular}\n\n`;
         } else {
-            summary += `No external forces applied.\n\n`;
+            summaryLines.push(`\\multicolumn{7}{|c|}{No elements defined.} \\\\\n`);
+        }
+        summaryLines.push(`\\hline\n`);
+        summaryLines.push(`\\end{tabular}\n\n`);
+
+        summaryLines.push(`\\paragraph{Element Statistics}\n`);
+        summaryLines.push(`\\begin{tabular}{|l|r|}\n`);
+        summaryLines.push(`\\hline\nMetric & Value \\\\\n\\hline\n`);
+        summaryLines.push(`Total Length & ${formatOptionalValue(totalLength)} \\\\\n`);
+        summaryLines.push(`Shortest Length & ${formatOptionalValue(shortestLength)} \\\\\n`);
+        summaryLines.push(`Longest Length & ${formatOptionalValue(longestLength)} \\\\\n`);
+        summaryLines.push(`Minimum Area & ${formatOptionalValue(minArea)} \\\\\n`);
+        summaryLines.push(`Maximum Area & ${formatOptionalValue(maxArea)} \\\\\n`);
+        summaryLines.push(`Average Stiffness & ${formatOptionalValue(averageStiffness)} \\\\\n`);
+        summaryLines.push(`Auto-calculated k Entries & ${autoKCount} \\\\\n`);
+        summaryLines.push(`\\hline\n\\end{tabular}\n\n`);
+
+        summaryLines.push(`\\subsection*{Applied Forces}\n`);
+        if (appliedForces.length > 0) {
+            summaryLines.push(`\\begin{tabular}{|c|r|}\n`);
+            summaryLines.push(`\\hline\n`);
+            summaryLines.push(`\\textbf{Node} & \\textbf{Force (F)} \\\\\n`);
+            summaryLines.push(`\\hline\n`);
+            appliedForces.forEach(item => {
+                summaryLines.push(`${item.node} & ${formatEngineeringNotationForLatex(item.force, decimalPlaces)} \\\\\n`);
+            });
+            summaryLines.push(`\\hline\n`);
+            summaryLines.push(`\\end{tabular}\n\n`);
+        } else {
+            summaryLines.push(`No external forces applied.\n\n`);
         }
 
-        // --- 2. Analysis Results ---
-        summary += `\\subsection*{Analysis Results}\n`;
+        summaryLines.push(`\\subsection*{System Diagram}\n`);
+        if (diagramLayout) {
+            const tikzFigure = renderDiagramTikz(diagramLayout, decimalPlaces);
+            summaryLines.push(`\\begin{figure}[h]\n\\centering\n${tikzFigure}\\caption{Automatically generated node and element connectivity diagram.}\n\\end{figure}\n\n`);
+        } else {
+            summaryLines.push(`${diagramError ? escapeLatex(diagramError) : 'Diagram unavailable. Ensure nodes and elements are defined before exporting.'}\n\n`);
+        }
 
-        // Global Stiffness Matrix
-        summary += `\\subsubsection*{Global Stiffness Matrix (K)}\n`;
+        summaryLines.push(`\\subsection*{Example 2.2 / 2.3 Reference Images}\n`);
+        if (requestedExampleFigures.length > 0) {
+            requestedExampleFigures.forEach(fig => {
+                summaryLines.push(`\\begin{figure}[h]\n\\centering\n\\includegraphics[width=0.85\\textwidth]{${formatGraphicPath(fig.src)}}\n\\caption{${escapeLatex(fig.caption)}}\n\\end{figure}\n\n`);
+            });
+        } else {
+            summaryLines.push(`No Example 2.2 or Example 2.3 illustration was selected during this session.\n\n`);
+        }
+
+        summaryLines.push(`\\subsection*{Computation Checklist}\n`);
+        summaryLines.push(`\\begin{tabular}{|l|c|}\n`);
+        summaryLines.push(`\\hline\nTask & State \\\\\n\\hline\n`);
+        const computationRows = [
+            { label: 'Global stiffness matrix ($K$)', ready: Boolean(matrixForExport.K), hint: '\\texttt{Generate Stiffness Matrix}' },
+            { label: 'Inverse reduced matrix ($K_r^{-1}$)', ready: Boolean(matrixForExport.invK), hint: '\\texttt{Invert Matrix}' },
+            { label: 'Nodal displacements ($d$)', ready: fullDisplacementVector.length > 0, hint: '\\texttt{Calculate Displacements}' },
+            { label: 'Reaction forces ($R$)', ready: reactionForcesResult.length > 0, hint: '\\texttt{Calculate Displacements}' },
+            { label: 'Element forces ($f$)', ready: elementForcesResult.length > 0, hint: '\\texttt{Calculate Element Forces}' },
+            { label: 'Element stresses ($\\sigma$)', ready: elementStressesResult.length > 0, hint: '\\texttt{Calculate Stresses}' }
+        ];
+        computationRows.forEach(row => {
+            const statusText = row.ready ? '\\textbf{Ready}' : `Pending (${row.hint})`;
+            summaryLines.push(`${row.label} & ${statusText} \\\\\n`);
+        });
+        summaryLines.push(`\\hline\n\\end{tabular}\n\n`);
+
+        const highlightRows = [];
+        if (appliedForces.length > 0) {
+            const peakLoad = appliedForces.reduce((best, current) => !best || Math.abs(current.force) > Math.abs(best.force) ? current : best, null);
+            if (peakLoad) {
+                highlightRows.push({
+                    metric: 'Largest applied load',
+                    location: `Node ${peakLoad.node}`,
+                    value: formatEngineeringNotationForLatex(peakLoad.force, decimalPlaces)
+                });
+            }
+        }
+
+        const displacementEntries = fullDisplacementVector
+            .map((value, index) => ({ node: index + 1, value }))
+            .filter(entry => Number.isFinite(entry.value) && entry.value !== 0);
+        if (displacementEntries.length > 0) {
+            const maxDisplacement = displacementEntries.reduce((best, curr) => Math.abs(curr.value) > Math.abs(best.value) ? curr : best, displacementEntries[0]);
+            highlightRows.push({
+                metric: 'Maximum |displacement|',
+                location: `Node ${maxDisplacement.node}`,
+                value: formatEngineeringNotationForLatex(maxDisplacement.value, decimalPlaces)
+            });
+        }
+
+        if (reactionForcesResult.length > 0) {
+            const maxReaction = reactionForcesResult.reduce((best, curr) => Math.abs(curr.force) > Math.abs(best.force) ? curr : best, reactionForcesResult[0]);
+            highlightRows.push({
+                metric: 'Maximum |reaction|',
+                location: `Node ${maxReaction.node}`,
+                value: formatEngineeringNotationForLatex(maxReaction.force, decimalPlaces)
+            });
+        }
+
+        if (elementForcesResult.length > 0) {
+            const maxElementForce = elementForcesResult.reduce((best, curr) => Math.abs(curr.force) > Math.abs(best.force) ? curr : best, elementForcesResult[0]);
+            highlightRows.push({
+                metric: 'Maximum |element force|',
+                location: escapeLatex(maxElementForce.label || ''),
+                value: formatEngineeringNotationForLatex(maxElementForce.force, decimalPlaces)
+            });
+        }
+
+        if (elementStressesResult.length > 0) {
+            const maxStress = elementStressesResult.reduce((best, curr) => Math.abs(curr.stress) > Math.abs(best.stress) ? curr : best, elementStressesResult[0]);
+            highlightRows.push({
+                metric: 'Maximum |element stress|',
+                location: escapeLatex(maxStress.label || ''),
+                value: formatEngineeringNotationForLatex(maxStress.stress, decimalPlaces)
+            });
+        }
+
+        summaryLines.push(`\\subsection*{Key Numerical Highlights}\n`);
+        if (highlightRows.length > 0) {
+            summaryLines.push(`\\begin{tabular}{|l|l|r|}\n`);
+            summaryLines.push(`\\hline\nMetric & Location & Value \\\\\n\\hline\n`);
+            highlightRows.forEach(row => {
+                summaryLines.push(`${row.metric} & ${row.location} & ${row.value} \\\\\n`);
+            });
+            summaryLines.push(`\\hline\n\\end{tabular}\n\n`);
+        } else {
+            summaryLines.push(`No analysis results to highlight.\n\n`);
+        }
+
+        summaryLines.push(`\\section*{Analysis Results}\n`);
+
+        summaryLines.push(`\\subsection*{Global Stiffness Matrix (K)}\n`);
         if (matrixForExport.K) {
-            summary += generateLatexString(matrixForExport.K, matrixForExport.kHeaders, matrixForExport.kNumericMultiplier);
+            summaryLines.push(generateLatexString(matrixForExport.K, matrixForExport.kHeaders, matrixForExport.kNumericMultiplier));
         } else {
-            summary += `Not calculated.\n\n`;
+            summaryLines.push(`Not calculated.\n\n`);
         }
 
-        // Inverse Matrix
-        summary += `\\subsubsection*{Inverse of Reduced Matrix ($K_r^{-1}$)}\n`;
+        summaryLines.push(`\\subsection*{Inverse of Reduced Matrix ($K_r^{-1}$)}\n`);
         if (matrixForExport.invK) {
-            summary += generateLatexString(matrixForExport.invK, matrixForExport.invKHeaders, matrixForExport.invKNumericMultiplier);
+            summaryLines.push(generateLatexString(matrixForExport.invK, matrixForExport.invKHeaders, matrixForExport.invKNumericMultiplier));
         } else {
-            summary += `Not calculated.\n\n`;
+            summaryLines.push(`Not calculated.\n\n`);
         }
 
-        // Displacements
-        summary += `\\subsubsection*{Nodal Displacements (d)}\n`;
+        summaryLines.push(`\\subsection*{Nodal Displacements (d)}\n`);
         if (fullDisplacementVector.length > 0) {
-            summary += `\\begin{tabular}{|c|r|}\n`;
-            summary += `\\hline\n`;
-            summary += `\\textbf{Node} & \\textbf{Displacement} \\\\\n`;
-            summary += `\\hline\n`;
+            summaryLines.push(`\\begin{tabular}{|c|r|}\n`);
+            summaryLines.push(`\\hline\n`);
+            summaryLines.push(`\\textbf{Node} & \\textbf{Displacement} \\\\\n`);
+            summaryLines.push(`\\hline\n`);
             fullDisplacementVector.forEach((d, i) => {
-                if (d !== 0) { // Only show non-zero displacements
-                    summary += `${i + 1} & ${formatEngineeringNotationForLatex(d, decimalPlaces)} \\\\\n`;
+                if (d !== 0 && Number.isFinite(d)) {
+                    summaryLines.push(`${i + 1} & ${formatEngineeringNotationForLatex(d, decimalPlaces)} \\\\\n`);
                 }
             });
-            summary += `\\hline\n`;
-            summary += `\\end{tabular}\n\n`;
+            summaryLines.push(`\\hline\n`);
+            summaryLines.push(`\\end{tabular}\n\n`);
         } else {
-            summary += `Not calculated.\n\n`;
+            summaryLines.push(`Not calculated.\n\n`);
         }
 
-        // Reaction Forces
-        summary += `\\subsubsection*{Reaction Forces (R)}\n`;
+        summaryLines.push(`\\subsection*{Reaction Forces (R)}\n`);
         if (reactionForcesResult.length > 0) {
-            summary += `\\begin{tabular}{|c|r|}\n`;
-            summary += `\\hline\n`;
-            summary += `\\textbf{Node} & \\textbf{Reaction Force} \\\\\n`;
-            summary += `\\hline\n`;
+            summaryLines.push(`\\begin{tabular}{|c|r|}\n`);
+            summaryLines.push(`\\hline\n`);
+            summaryLines.push(`\\textbf{Node} & \\textbf{Reaction Force} \\\\\n`);
+            summaryLines.push(`\\hline\n`);
             reactionForcesResult.forEach(r => {
-                summary += `${r.node} & ${formatEngineeringNotationForLatex(r.force, decimalPlaces)} \\\\\n`;
+                summaryLines.push(`${r.node} & ${formatEngineeringNotationForLatex(r.force, decimalPlaces)} \\\\\n`);
             });
-            summary += `\\hline\n`;
-            summary += `\\end{tabular}\n\n`;
+            summaryLines.push(`\\hline\n`);
+            summaryLines.push(`\\end{tabular}\n\n`);
         } else {
-            summary += `Not calculated.\n\n`;
+            summaryLines.push(`Not calculated.\n\n`);
         }
 
-        // Elemental Forces
-        summary += `\\subsubsection*{Elemental Forces (f)}\n`;
+        summaryLines.push(`\\subsection*{Elemental Forces (f)}\n`);
         if (elementForcesResult.length > 0) {
-            summary += `\\begin{tabular}{|l|r|}\n`;
-            summary += `\\hline\n`;
-            summary += `\\textbf{Element} & \\textbf{Force} \\\\\n`;
-            summary += `\\hline\n`;
+            summaryLines.push(`\\begin{tabular}{|l|r|}\n`);
+            summaryLines.push(`\\hline\n`);
+            summaryLines.push(`\\textbf{Element} & \\textbf{Force} \\\\\n`);
+            summaryLines.push(`\\hline\n`);
             elementForcesResult.forEach(f => {
-                summary += `${f.label.replace(/&/g, '\\&')} & ${formatEngineeringNotationForLatex(f.force, decimalPlaces)} \\\\\n`;
+                summaryLines.push(`${escapeLatex(f.label)} & ${formatEngineeringNotationForLatex(f.force, decimalPlaces)} \\\\\n`);
             });
-            summary += `\\hline\n`;
-            summary += `\\end{tabular}\n\n`;
+            summaryLines.push(`\\hline\n`);
+            summaryLines.push(`\\end{tabular}\n\n`);
         } else {
-            summary += `Not calculated.\n\n`;
+            summaryLines.push(`Not calculated.\n\n`);
         }
 
-        // Elemental Stresses
-        summary += `\\subsubsection*{Elemental Stresses ($\\sigma$)}\n`;
+        summaryLines.push(`\\subsection*{Elemental Stresses ($\\sigma$)}\n`);
         if (elementStressesResult.length > 0) {
-            summary += `\\begin{tabular}{|l|r|}\n`;
-            summary += `\\hline\n`;
-            summary += `\\textbf{Element} & \\textbf{Stress} \\\\\n`;
-            summary += `\\hline\n`;
+            summaryLines.push(`\\begin{tabular}{|l|r|}\n`);
+            summaryLines.push(`\\hline\n`);
+            summaryLines.push(`\\textbf{Element} & \\textbf{Stress} \\\\\n`);
+            summaryLines.push(`\\hline\n`);
             elementStressesResult.forEach(s => {
-                summary += `${s.label.replace(/&/g, '\\&')} & ${formatEngineeringNotationForLatex(s.stress, decimalPlaces)} \\\\\n`;
+                summaryLines.push(`${escapeLatex(s.label)} & ${formatEngineeringNotationForLatex(s.stress, decimalPlaces)} \\\\\n`);
             });
-            summary += `\\hline\n`;
-            summary += `\\end{tabular}\n\n`;
+            summaryLines.push(`\\hline\n`);
+            summaryLines.push(`\\end{tabular}\n\n`);
         } else {
-            summary += `Not calculated.\n\n`;
+            summaryLines.push(`Not calculated.\n\n`);
         }
-        
-        summary += `%\\end{document}\n`;
 
+        summaryLines.push(`\\end{document}\n`);
+
+        const summary = summaryLines.join('');
         promptWithLatex(summary, "LaTeX Analysis Summary");
     };
 
