@@ -135,42 +135,42 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryFormulae: [
                 {
                     title: 'Element stiffness (auto)',
-                    math: '\\\\displaystyle k_e = \\\\frac{EA}{L}',
+                    math: '\\displaystyle k_e = \\frac{EA}{L}',
                     description: 'Used whenever "Calc k" is enabled.'
                 },
                 {
                     title: 'Scaled element stiffness',
                     mathBuilder: ({ lambdaSymbol, lambdaValueLatex }) => {
-                        const suffix = lambdaValueLatex ? `,\\\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
-                        return `k_e^{\\\\ast} = ${lambdaSymbol}\\\\,k_e${suffix}`;
+                        const suffix = lambdaValueLatex ? `,\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
+                        return `k_e^{\\ast} = ${lambdaSymbol}\\,k_e${suffix}`;
                     },
                     description: 'Applies the global multiplier to every element prior to assembly.'
                 },
                 {
                     title: 'Global equilibrium',
                     mathBuilder: ({ lambdaSymbol, lambdaValueLatex }) => {
-                        const suffix = lambdaValueLatex ? `,\\\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
-                        return `\\\\mathbf{K}\\\\,\\\\mathbf{d} = \\\\mathbf{F},\\\\quad \\\\mathbf{K} = ${lambdaSymbol}\\\\,\\\\mathbf{K}_{\\\\text{assembled}}${suffix}`;
+                        const suffix = lambdaValueLatex ? `,\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
+                        return `\\mathbf{K}\\,\\mathbf{d} = \\mathbf{F},\\quad \\mathbf{K} = ${lambdaSymbol}\\,\\mathbf{K}_{\\text{assembled}}${suffix}`;
                     }
                 },
                 {
                     title: 'Free DOF solve',
-                    math: '\\\\mathbf{d}_f = \\\\mathbf{K}_r^{-1}\\\\mathbf{F}_f',
+                    math: '\\mathbf{d}_f = \\mathbf{K}_r^{-1}\\mathbf{F}_f',
                     description: 'Reduces the system to the unfixed degrees of freedom.'
                 },
                 {
                     title: 'Reaction forces',
-                    math: '\\\\mathbf{R} = \\\\mathbf{K}\\\\mathbf{d} - \\\\mathbf{F}',
+                    math: '\\mathbf{R} = \\mathbf{K}\\mathbf{d} - \\mathbf{F}',
                     description: 'Computed at each fixed node after solving for d.'
                 },
                 {
                     title: 'Element force',
-                    math: 'f_e = k_e^{\\\\ast}(d_2 - d_1)',
+                    math: 'f_e = k_e^{\\ast}(d_2 - d_1)',
                     description: 'Internal axial force for each element.'
                 },
                 {
                     title: 'Element stress',
-                    math: '\\\\sigma_e = \\\\frac{f_e}{A} = \\\\frac{k_e^{\\\\ast}}{A}(d_2 - d_1)',
+                    math: '\\sigma_e = \\frac{f_e}{A} = \\frac{k_e^{\\ast}}{A}(d_2 - d_1)',
                     description: 'Stress/flux reported in the Elemental Stresses table.'
                 }
             ]
@@ -233,42 +233,42 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryFormulae: [
                 {
                     title: 'Element conductance (auto)',
-                    math: '\\\\displaystyle G_e = \\\\frac{kA}{L}',
+                    math: '\\displaystyle G_e = \\frac{kA}{L}',
                     description: 'Used whenever "Calc G" is enabled.'
                 },
                 {
                     title: 'Scaled conductance',
                     mathBuilder: ({ lambdaSymbol, lambdaValueLatex }) => {
-                        const suffix = lambdaValueLatex ? `,\\\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
-                        return `G_e^{\\\\ast} = ${lambdaSymbol}\\\\,G_e${suffix}`;
+                        const suffix = lambdaValueLatex ? `,\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
+                        return `G_e^{\\ast} = ${lambdaSymbol}\\,G_e${suffix}`;
                     },
                     description: 'Applies the global multiplier supplied on the Inputs panel.'
                 },
                 {
                     title: 'Energy balance',
                     mathBuilder: ({ lambdaSymbol, lambdaValueLatex }) => {
-                        const suffix = lambdaValueLatex ? `,\\\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
-                        return `\\\\mathbf{K}\\\\,\\\\mathbf{T} = \\\\mathbf{Q},\\\\quad \\\\mathbf{K} = ${lambdaSymbol}\\\\,\\\\mathbf{K}_{\\\\text{assembled}}${suffix}`;
+                        const suffix = lambdaValueLatex ? `,\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
+                        return `\\mathbf{K}\\,\\mathbf{T} = \\mathbf{Q},\\quad \\mathbf{K} = ${lambdaSymbol}\\,\\mathbf{K}_{\\text{assembled}}${suffix}`;
                     }
                 },
                 {
                     title: 'Free-node solution',
-                    math: '\\\\mathbf{T}_f = \\\\mathbf{K}_r^{-1}\\\\mathbf{Q}_f',
+                    math: '\\mathbf{T}_f = \\mathbf{K}_r^{-1}\\mathbf{Q}_f',
                     description: 'Solves the unknown temperatures.'
                 },
                 {
                     title: 'Reaction heat flow',
-                    math: '\\\\mathbf{Q}_r = \\\\mathbf{K}\\\\mathbf{T} - \\\\mathbf{Q}',
+                    math: '\\mathbf{Q}_r = \\mathbf{K}\\mathbf{T} - \\mathbf{Q}',
                     description: 'Heat leaving prescribed-temperature nodes.'
                 },
                 {
                     title: 'Element heat flow',
-                    math: 'Q_e = G_e^{\\\\ast}(T_2 - T_1)',
+                    math: 'Q_e = G_e^{\\ast}(T_2 - T_1)',
                     description: 'Positive when heat flows from node 1 to node 2.'
                 },
                 {
                     title: 'Heat flux',
-                    math: 'q_e = \\\\frac{Q_e}{A} = \\\\frac{G_e^{\\\\ast}}{A}(T_2 - T_1)',
+                    math: 'q_e = \\frac{Q_e}{A} = \\frac{G_e^{\\ast}}{A}(T_2 - T_1)',
                     description: 'Flux/gradient reported in the Elemental Heat Flux table.'
                 }
             ]
