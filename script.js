@@ -128,7 +128,52 @@ document.addEventListener('DOMContentLoaded', () => {
             matrixButtonTitle: 'Generate the global stiffness matrix from the defined elements.',
             boundaryValueLabel: 'Prescribed Displacement',
             boundaryValuePlaceholder: 'e.g., 0',
-            boundaryValueTitle: 'Enter the displacement enforced at this node (leave blank for zero).'
+            boundaryValueTitle: 'Enter the displacement enforced at this node (leave blank for zero).',
+            formulaSectionHeading: 'Calculation Formulae',
+            formulaIntro: 'Key relationships used when computing the reported quantities:',
+            globalMultiplierSymbol: '\\lambda',
+            summaryFormulae: [
+                {
+                    title: 'Element stiffness (auto)',
+                    math: '\\\\displaystyle k_e = \\\\frac{EA}{L}',
+                    description: 'Used whenever "Calc k" is enabled.'
+                },
+                {
+                    title: 'Scaled element stiffness',
+                    mathBuilder: ({ lambdaSymbol, lambdaValueLatex }) => {
+                        const suffix = lambdaValueLatex ? `,\\\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
+                        return `k_e^{\\\\ast} = ${lambdaSymbol}\\\\,k_e${suffix}`;
+                    },
+                    description: 'Applies the global multiplier to every element prior to assembly.'
+                },
+                {
+                    title: 'Global equilibrium',
+                    mathBuilder: ({ lambdaSymbol, lambdaValueLatex }) => {
+                        const suffix = lambdaValueLatex ? `,\\\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
+                        return `\\\\mathbf{K}\\\\,\\\\mathbf{d} = \\\\mathbf{F},\\\\quad \\\\mathbf{K} = ${lambdaSymbol}\\\\,\\\\mathbf{K}_{\\\\text{assembled}}${suffix}`;
+                    }
+                },
+                {
+                    title: 'Free DOF solve',
+                    math: '\\\\mathbf{d}_f = \\\\mathbf{K}_r^{-1}\\\\mathbf{F}_f',
+                    description: 'Reduces the system to the unfixed degrees of freedom.'
+                },
+                {
+                    title: 'Reaction forces',
+                    math: '\\\\mathbf{R} = \\\\mathbf{K}\\\\mathbf{d} - \\\\mathbf{F}',
+                    description: 'Computed at each fixed node after solving for d.'
+                },
+                {
+                    title: 'Element force',
+                    math: 'f_e = k_e^{\\\\ast}(d_2 - d_1)',
+                    description: 'Internal axial force for each element.'
+                },
+                {
+                    title: 'Element stress',
+                    math: '\\\\sigma_e = \\\\frac{f_e}{A} = \\\\frac{k_e^{\\\\ast}}{A}(d_2 - d_1)',
+                    description: 'Stress/flux reported in the Elemental Stresses table.'
+                }
+            ]
         },
         thermal: {
             key: 'thermal',
@@ -181,7 +226,52 @@ document.addEventListener('DOMContentLoaded', () => {
             matrixButtonTitle: 'Assemble the global conductance matrix from the defined elements.',
             boundaryValueLabel: 'Prescribed Temperature (°C)',
             boundaryValuePlaceholder: 'e.g., 21',
-            boundaryValueTitle: 'Enter the enforced nodal temperature (leave blank if unknown).'
+            boundaryValueTitle: 'Enter the enforced nodal temperature (leave blank if unknown).',
+            formulaSectionHeading: 'Calculation Formulae',
+            formulaIntro: 'Thermal quantities follow the direct formulation shown below:',
+            globalMultiplierSymbol: '\\lambda',
+            summaryFormulae: [
+                {
+                    title: 'Element conductance (auto)',
+                    math: '\\\\displaystyle G_e = \\\\frac{kA}{L}',
+                    description: 'Used whenever "Calc G" is enabled.'
+                },
+                {
+                    title: 'Scaled conductance',
+                    mathBuilder: ({ lambdaSymbol, lambdaValueLatex }) => {
+                        const suffix = lambdaValueLatex ? `,\\\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
+                        return `G_e^{\\\\ast} = ${lambdaSymbol}\\\\,G_e${suffix}`;
+                    },
+                    description: 'Applies the global multiplier supplied on the Inputs panel.'
+                },
+                {
+                    title: 'Energy balance',
+                    mathBuilder: ({ lambdaSymbol, lambdaValueLatex }) => {
+                        const suffix = lambdaValueLatex ? `,\\\\; ${lambdaSymbol} = ${lambdaValueLatex}` : '';
+                        return `\\\\mathbf{K}\\\\,\\\\mathbf{T} = \\\\mathbf{Q},\\\\quad \\\\mathbf{K} = ${lambdaSymbol}\\\\,\\\\mathbf{K}_{\\\\text{assembled}}${suffix}`;
+                    }
+                },
+                {
+                    title: 'Free-node solution',
+                    math: '\\\\mathbf{T}_f = \\\\mathbf{K}_r^{-1}\\\\mathbf{Q}_f',
+                    description: 'Solves the unknown temperatures.'
+                },
+                {
+                    title: 'Reaction heat flow',
+                    math: '\\\\mathbf{Q}_r = \\\\mathbf{K}\\\\mathbf{T} - \\\\mathbf{Q}',
+                    description: 'Heat leaving prescribed-temperature nodes.'
+                },
+                {
+                    title: 'Element heat flow',
+                    math: 'Q_e = G_e^{\\\\ast}(T_2 - T_1)',
+                    description: 'Positive when heat flows from node 1 to node 2.'
+                },
+                {
+                    title: 'Heat flux',
+                    math: 'q_e = \\\\frac{Q_e}{A} = \\\\frac{G_e^{\\\\ast}}{A}(T_2 - T_1)',
+                    description: 'Flux/gradient reported in the Elemental Heat Flux table.'
+                }
+            ]
         }
     };
     const getValidMode = (mode) => (MODE_CONFIG[mode] ? mode : 'structural');
@@ -1925,6 +2015,37 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryLines.push(`    \\item ${escapeLatex(modeConfig.bulkPropertyLabel)}: ${formatOptionalValue(bulkPropertyValue)}\n`);
         summaryLines.push(`    \\item Global Multiplier: ${formatOptionalValue(globalMultiplierValue)}\n`);
         summaryLines.push(`\\end{itemize}\n\n`);
+
+        const summaryFormulae = Array.isArray(modeConfig.summaryFormulae) ? modeConfig.summaryFormulae : [];
+        if (summaryFormulae.length > 0) {
+            const formulaHeading = modeConfig.formulaSectionHeading || 'Calculation Formulae';
+            summaryLines.push(`\\subsection*{${escapeLatex(formulaHeading)}}\n`);
+            if (modeConfig.formulaIntro) {
+                summaryLines.push(`${escapeLatex(modeConfig.formulaIntro)}\n\n`);
+            }
+            const lambdaSymbol = modeConfig.globalMultiplierSymbol || '\\lambda';
+            const lambdaValueLatex = Number.isFinite(globalMultiplierValue)
+                ? formatEngineeringNotationForLatex(globalMultiplierValue, decimalPlaces, false)
+                : null;
+            const formulaContext = {
+                lambdaSymbol,
+                lambdaValueLatex
+            };
+            summaryLines.push(`\\begin{description}\n`);
+            summaryFormulae.forEach(block => {
+                const mathContent = typeof block.mathBuilder === 'function'
+                    ? block.mathBuilder(formulaContext)
+                    : block.math;
+                if (!mathContent) {
+                    return;
+                }
+                const displayType = block.display === 'inline' ? 'inline' : 'block';
+                const mathWrapped = displayType === 'inline' ? `$${mathContent}$` : `\\[${mathContent}\\]`;
+                const description = block.description ? ` ${escapeLatex(block.description)}` : '';
+                summaryLines.push(`\\item[${escapeLatex(block.title || 'Formula')}] ${mathWrapped}${description}\n`);
+            });
+            summaryLines.push(`\\end{description}\n\n`);
+        }
 
         summaryLines.push(`\\subsection*{Element Inventory}\n`);
         summaryLines.push(`\\begin{tabular}{|l|c|c|r|r|r|c|}\n`);
