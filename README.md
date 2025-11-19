@@ -71,6 +71,8 @@ No external frameworks or libraries are used for the core application logic, ens
 
 Contributions are welcome! Please feel free to submit a pull request or open an issue for any bugs or feature requests.
 
+If you spot any potential copyright infringement in this project, please notify the app's creator and every effort will be made to address the concern promptly.
+
 ## Testing
 
 Use Node.js v18+ (the repo was verified with v22). Run the automated calculations tests with:
