@@ -20,6 +20,17 @@ body {
     padding: 20px;
 }
 
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
 h1 {
     font-size: 2.1rem;
     margin: 0 0 10px;
@@ -117,7 +128,35 @@ p {
     gap: 10px 18px;
 }
 
-.fixed-node-item,
+.fixed-node-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 0.95rem;
+    padding: 10px;
+    border: 1px solid #e3e9f3;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.fixed-node-item .fixed-node-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fixed-node-item .fixed-node-value {
+    width: 100%;
+}
+
+.fixed-node-item .fixed-node-value input {
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #cfd6e3;
+}
+
 .force-item {
     display: flex;
     align-items: center;

@@ -9,8 +9,10 @@ A web-based tool for generating and analysing 1D stiffness matrices for systems 
 *   **Dynamic System Definition**: Easily define the number of nodes and add or remove multiple spring elements.
 *   **Flexible Element Properties**: For each element, specify its connectivity (nodes), area, length, and stiffness.
 *   **Automatic Stiffness Calculation**: Optionally calculates an element's stiffness (`k`) automatically based on its Area (`A`), Length (`L`), and a global Young's Modulus (`E`).
+*   **Dual Analysis Modes**: Toggle between structural (axial springs/bars) and steady-state thermal conduction; labels, solvers, and LaTeX reports adapt automatically for each discipline.
 *   **Global Matrix Assembly**: Automatically generates the global stiffness matrix (`K`) from the individual element properties.
 *   **Boundary Conditions & Forces**: Apply fixed-node boundary conditions and specify external forces at each node.
+*   **Custom Boundary Values**: Enter non-zero prescribed displacements or temperatures directly on the fixed nodes to model known supports or Dirichlet thermal boundaries.
 *   **Complete Analysis Suite**:
     *   Calculates the inverse of the reduced stiffness matrix (`Kr⁻¹`).
     *   Solves for **Nodal Displacements** (`d`).
@@ -40,11 +42,15 @@ Nodes 1–3 are arranged sequentially with the left end fixed, and a 50 kN tip
 
 The “Moaveni Parallel” preset reproduces the axial bar assembly from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (6th ed., Pearson, 2015), Chapter 2 Example 2.3. In that example, the bar contains three sequential segments with a parallel branch between nodes 2 and 3, all evaluated with \((E = 210\,\text{GPa})\) and a 40 kN end load. Loading the preset recreates the geometry, areas, lengths, and stiffnesses shown in Moaveni’s worked problem so you can verify the book’s nodal displacements, internal forces, and reaction forces directly inside the app.
 
+### Example 2.4 Thermal Wall
+
+The “Example 2.4” preset switches the app into steady-state thermal analysis, loads the six-layer exterior wall described in *Heat_transfer_example.pdf* (“Direct formulation: thermal applications”), and pre-fills the outside/inside film temperatures (\(-6.7^\circ\text{C}\) and \(21^\circ\text{C}\)). Each layer’s U-factor is automatically converted into a conductance ( \(G = U \times A\) with \(A = 14\,\text{m}^2\) ), so you can immediately reproduce the published nodal temperature distribution and total heat loss through the wall.
+
 ## How to Use
 
-1.  **Set Global Parameters**: Start by defining the `Number of Nodes`, a `Global Multiplier` (if you want to scale all stiffness values), and the global `Young's Modulus`.
+1.  **Set Global Parameters**: Start by choosing the `Analysis Type`, defining the `Number of Nodes`, a `Global Multiplier`, and the discipline-specific material property (Young's Modulus for structural mode or Thermal Conductivity for thermal mode).
 2.  **Define Elements**: Click "Add Element" to create a new spring. For each element, define its label, which nodes it connects, and its physical properties (Area, Length). You can either input the stiffness `k` directly or check the "Calc k" box to have it computed for you.
-3.  **Set Boundary Conditions**: In the "Boundary Conditions" section, check the boxes corresponding to any nodes that are fixed (i.e., have zero displacement).
+3.  **Set Boundary Conditions**: In the "Boundary Conditions" section, check the boxes corresponding to any nodes that are fixed and (optionally) type the prescribed displacement/temperature value for those nodes.
 4.  **Apply Forces**: In the "Applied Forces" section, enter any external forces applied at each node.
 5.  **Analyse**: Use the action buttons to perform calculations in sequence:
     *   `Generate Stiffness Matrix`

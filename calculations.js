@@ -115,18 +115,34 @@
         return matrix.map(row => row.reduce((sum, value, index) => sum + value * vector[index], 0));
     };
 
-    const computeDisplacements = ({ invertedReducedMatrix, freeNodesIndices, forces, globalMatrix, globalMultiplier }) => {
+    const computeDisplacements = ({ invertedReducedMatrix, freeNodesIndices, fixedNodesIndices = [], forces, globalMatrix, globalMultiplier, knownDisplacements = [] }) => {
         if (!invertedReducedMatrix || !Array.isArray(invertedReducedMatrix)) {
             throw new Error('Inverted reduced matrix is required.');
         }
         const numNodes = globalMatrix.length;
+        const scaledGlobalMatrix = globalMatrix.map(row => row.map(val => val * globalMultiplier));
         const freeForces = freeNodesIndices.map(i => forces[i] || 0);
+        if (fixedNodesIndices.length > 0 && knownDisplacements.length === numNodes) {
+            freeNodesIndices.forEach((nodeIndex, idx) => {
+                let adjustment = 0;
+                fixedNodesIndices.forEach(fixedIndex => {
+                    adjustment += scaledGlobalMatrix[nodeIndex][fixedIndex] * (knownDisplacements[fixedIndex] || 0);
+                });
+                freeForces[idx] -= adjustment;
+            });
+        }
         const displacements = invertedReducedMatrix.map(row => row.reduce((sum, value, idx) => sum + value * freeForces[idx], 0));
         const fullDisplacementVector = Array(numNodes).fill(0);
+        if (knownDisplacements.length === numNodes) {
+            knownDisplacements.forEach((val, idx) => {
+                if (Number.isFinite(val)) {
+                    fullDisplacementVector[idx] = val;
+                }
+            });
+        }
         freeNodesIndices.forEach((nodeIndex, i) => {
             fullDisplacementVector[nodeIndex] = displacements[i];
         });
-        const scaledGlobalMatrix = globalMatrix.map(row => row.map(val => val * globalMultiplier));
         const kTimesD = multiplyMatrixVector(scaledGlobalMatrix, fullDisplacementVector);
         const reactionForces = kTimesD.map((val, idx) => val - (forces[idx] || 0));
         return { displacements, fullDisplacementVector, reactionForces };

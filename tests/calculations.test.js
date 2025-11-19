@@ -86,3 +86,46 @@ test('global multiplier scales stiffness and displacements accordingly', () => {
 
     approxEqual(displacements[0], 0.1); // Without multiplier would be 0.2
 });
+
+test('thermal interpretation returns expected heat flow and flux', () => {
+    const elements = [
+        { node1: 1, node2: 2, stiffness: 15, area: 0.5 },
+        { node1: 2, node2: 3, stiffness: 30, area: 0.25 }
+    ];
+    const nodalTemperatures = [350, 300, 260];
+    const heatFlows = Calculations.calculateElementForces(elements, nodalTemperatures, 1);
+    approxEqual(heatFlows[0].force, -750);
+    approxEqual(heatFlows[1].force, -1200);
+
+    const heatFlux = Calculations.calculateElementStresses(elements, nodalTemperatures, 1);
+    approxEqual(heatFlux[0].stress, -1500);
+   approxEqual(heatFlux[1].stress, -4800);
+});
+
+test('computeDisplacements respects prescribed boundary values', () => {
+    const numNodes = 3;
+    const elements = [
+        { node1: 1, node2: 2, stiffness: 100, area: 1 },
+        { node1: 2, node2: 3, stiffness: 100, area: 1 }
+    ];
+    const globalMatrix = Calculations.assembleGlobalStiffnessMatrix(numNodes, elements);
+    const freeNodes = [1];
+    const fixedNodesIndices = [0, 2];
+    const knownDisplacements = [10, 0, 20];
+    const forces = [0, 0, 0];
+    const reducedMatrix = Calculations.buildReducedMatrix(globalMatrix, freeNodes, 1);
+    const invertedReduced = Calculations.invertMatrix(reducedMatrix);
+    const { fullDisplacementVector, reactionForces } = Calculations.computeDisplacements({
+        invertedReducedMatrix: invertedReduced,
+        freeNodesIndices: freeNodes,
+        fixedNodesIndices,
+        knownDisplacements,
+        forces,
+        globalMatrix,
+        globalMultiplier: 1
+    });
+
+    approxEqual(fullDisplacementVector[1], 15);
+    approxEqual(reactionForces[0], -500);
+    approxEqual(reactionForces[2], 500);
+});

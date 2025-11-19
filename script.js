@@ -13,10 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const addElementBtn = document.getElementById('add-element-btn');
     const loadExample1Btn = document.getElementById('load-example-1-btn');
     const loadExample3Btn = document.getElementById('load-example-3-btn');
+    const loadExample4Btn = document.getElementById('load-example-4-btn');
     const activity23Btn = document.getElementById('activity-2-3-btn');
     const loadExampleCookBtn = document.getElementById('load-example-cook-btn');
     const loadExampleMoaveniBtn = document.getElementById('load-example-moaveni-btn');
     const clearAppBtn = document.getElementById('clear-app-btn');
+    const analysisModeSelect = document.getElementById('analysis-mode');
     const matrixContainer = document.getElementById('matrix-container');
     const inverseMatrixContainer = document.getElementById('inverse-matrix-container');
     const displacementsContainer = document.getElementById('displacements-container');
@@ -43,6 +45,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportJsonBtn = document.getElementById('export-json-btn');
     const importJsonBtn = document.getElementById('import-json-btn');
     const importJsonInput = document.getElementById('import-json-input');
+    const forcesTitleElement = document.getElementById('forces-title');
+    const forcesDescriptionElement = document.getElementById('forces-description');
+    const displacementsTitleElement = document.getElementById('displacements-title');
+    const reactionTitleElement = document.getElementById('reaction-title');
+    const stressesTitleElement = document.getElementById('stresses-title');
+    const elementForcesTitleElement = document.getElementById('element-forces-title');
+    const bulkPropertyLabelElement = document.querySelector('label[for="youngs-modulus"]');
+    const kTitleElement = document.getElementById('k-title');
+    const invKTitleElement = document.getElementById('inv-k-title');
 
     const CalculationsModule = window.Calculations;
     if (!CalculationsModule) {
@@ -65,6 +76,117 @@ document.addEventListener('DOMContentLoaded', () => {
     let elementStressesResult = [];
     let elementForcesResult = [];
     let matrixForExport = { K: null, invK: null, kHeaders: null, invKHeaders: null, kMultiplierHtml: '', invKMultiplierHtml: '', kNumericMultiplier: 1, invKNumericMultiplier: 1 };
+    const MODE_CONFIG = {
+        structural: {
+            key: 'structural',
+            displayName: 'Structural (axial springs/bars)',
+            bulkPropertyLabel: "Young's Modulus (E)",
+            bulkPropertyDescription: "Enter a global Young's Modulus used when auto-calculating stiffness values from A and L.",
+            loadHeading: 'Applied Forces (F)',
+            loadDescription: 'Specify the force acting at each node.',
+            loadSymbol: 'F',
+            loadColumnLabel: 'Force (F)',
+            noLoadText: 'No external forces applied.',
+            loadInputTitle: 'Enter the external force applied at this node.',
+            fixedNodeTitle: 'Tick to fix this node, preventing any displacement.',
+            elementCoefficientLabel: 'Stiffness (k)',
+            elementCoefficientDescription: 'The stiffness value of the element. Can be calculated automatically.',
+            elementAutoLabel: 'Calc k',
+            elementAutoDescription: 'Tick to calculate stiffness automatically from E, A, and l.',
+            elementMatrixHeading: 'Element Stiffness Matrix',
+            primarySolveButton: 'Calculate Displacements',
+            primarySolveTitle: 'Calculate the nodal displacements, which also computes reaction forces.',
+            primaryResultHeading: 'Nodal Displacements (d)',
+            primaryResultColumn: 'Displacement',
+            primarySymbol: '$d$',
+            reactionHeading: 'Reaction Forces (R)',
+            reactionColumn: 'Reaction Force',
+            reactionSymbol: '$R$',
+            reactionNoneMessage: 'No fixed nodes to calculate reaction forces for.',
+            elementForceHeading: 'Elemental Forces (f)',
+            elementForceColumn: 'Force',
+            elementForceButton: 'Calculate Element Forces',
+            elementForceTitle: 'Calculate the internal force within each element.',
+            elementForceSymbol: '$f$',
+            elementFluxHeading: 'Elemental Stresses ($\\sigma$)',
+            elementFluxColumn: 'Stress',
+            elementFluxButton: 'Calculate Stresses',
+            elementFluxTitle: 'Calculate the stress within each element.',
+            elementFluxSymbol: '$\\sigma$',
+            highlightPrimaryMetric: 'Maximum |displacement|',
+            highlightReactionMetric: 'Maximum |reaction|',
+            highlightElementForceMetric: 'Maximum |element force|',
+            highlightElementFluxMetric: 'Maximum |element stress|',
+            boundaryDescription: 'fixed nodes',
+            loadValueLabel: 'Load',
+            diagramLoadLabel: 'Force',
+            appliedLoadVerb: 'loaded nodes',
+            presetImageReminderIntro: 'Reminder: copy the referenced Example figures into the same directory before compiling',
+            matrixHeading: 'Global Stiffness Matrix (K)',
+            loadedNodesLabel: 'Loaded Nodes',
+            matrixButtonText: 'Generate Stiffness Matrix',
+            matrixButtonTitle: 'Generate the global stiffness matrix from the defined elements.',
+            boundaryValueLabel: 'Prescribed Displacement',
+            boundaryValuePlaceholder: 'e.g., 0',
+            boundaryValueTitle: 'Enter the displacement enforced at this node (leave blank for zero).'
+        },
+        thermal: {
+            key: 'thermal',
+            displayName: 'Thermal conduction',
+            bulkPropertyLabel: 'Thermal Conductivity (k)',
+            bulkPropertyDescription: 'Enter a global thermal conductivity used when auto-calculating conductance values from A and L.',
+            loadHeading: 'Applied Heat Loads (Q)',
+            loadDescription: 'Specify the net heat entering each node (positive adds heat).',
+            loadSymbol: 'Q',
+            loadColumnLabel: 'Heat Load (Q)',
+            noLoadText: 'No heat loads applied.',
+            loadInputTitle: 'Enter the applied nodal heat load.',
+            fixedNodeTitle: 'Tick to prescribe the temperature of this node.',
+            elementCoefficientLabel: 'Conductance (G)',
+            elementCoefficientDescription: 'The thermal conductance (kA/L) of the element. Can be calculated automatically.',
+            elementAutoLabel: 'Calc G',
+            elementAutoDescription: 'Tick to calculate conductance automatically from k, A, and l.',
+            elementMatrixHeading: 'Element Conductance Matrix',
+            primarySolveButton: 'Calculate Temperatures',
+            primarySolveTitle: 'Solve the nodal temperatures and reaction heat flows.',
+            primaryResultHeading: 'Nodal Temperatures (T)',
+            primaryResultColumn: 'Temperature',
+            primarySymbol: '$T$',
+            reactionHeading: 'Reaction Heat Flows ($Q_r$)',
+            reactionColumn: 'Heat Flow',
+            reactionSymbol: '$Q_r$',
+            reactionNoneMessage: 'No fixed nodes to calculate reaction heat flows for.',
+            elementForceHeading: 'Elemental Heat Flow (Q)',
+            elementForceColumn: 'Heat Flow',
+            elementForceButton: 'Calculate Heat Flow',
+            elementForceTitle: 'Calculate the heat flow through each element.',
+            elementForceSymbol: '$Q$',
+            elementFluxHeading: 'Elemental Heat Flux ($q$)',
+            elementFluxColumn: 'Heat Flux',
+            elementFluxButton: 'Calculate Heat Flux',
+            elementFluxTitle: 'Calculate the heat flux (per area) for each element.',
+            elementFluxSymbol: '$q$',
+            highlightPrimaryMetric: 'Maximum |temperature|',
+            highlightReactionMetric: 'Maximum |reaction heat|',
+            highlightElementForceMetric: 'Maximum |element heat flow|',
+            highlightElementFluxMetric: 'Maximum |heat flux|',
+            boundaryDescription: 'prescribed temperatures',
+            loadValueLabel: 'Heat Load',
+            diagramLoadLabel: 'Heat',
+            appliedLoadVerb: 'heated nodes',
+            presetImageReminderIntro: 'Reminder: copy the referenced Example figures into the same directory before compiling',
+            matrixHeading: 'Global Conductance Matrix (K)',
+            loadedNodesLabel: 'Heated Nodes',
+            matrixButtonText: 'Generate Conductance Matrix',
+            matrixButtonTitle: 'Assemble the global conductance matrix from the defined elements.',
+            boundaryValueLabel: 'Prescribed Temperature (°C)',
+            boundaryValuePlaceholder: 'e.g., 21',
+            boundaryValueTitle: 'Enter the enforced nodal temperature (leave blank if unknown).'
+        }
+    };
+    const getValidMode = (mode) => (MODE_CONFIG[mode] ? mode : 'structural');
+    let analysisMode = analysisModeSelect ? getValidMode(analysisModeSelect.value) : 'structural';
+    const getModeConfig = () => MODE_CONFIG[analysisMode] || MODE_CONFIG.structural;
     const presetIllustrationMetadata = {
         example22: {
             key: 'example22',
@@ -75,6 +197,11 @@ document.addEventListener('DOMContentLoaded', () => {
             key: 'example23',
             src: 'images/2_3_example.png',
             caption: 'Example 2.3 reference diagram'
+        },
+        example24: {
+            key: 'example24',
+            src: 'images/example_2_4_wall.svg',
+            caption: 'Example 2.4 exterior wall diagram'
         }
     };
     const activePresetIllustrations = new Set();
@@ -96,17 +223,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateActionButtonStates = () => {
+        const modeConfig = getModeConfig();
         if (calculateStressesBtn) {
             calculateStressesBtn.disabled = calculationState.displacementsDirty;
             calculateStressesBtn.title = calculationState.displacementsDirty
-                ? 'Calculate displacements before evaluating stresses.'
-                : 'Calculate the stress within each element.';
+                ? `${modeConfig.primarySolveButton} before evaluating ${modeConfig.elementFluxHeading.toLowerCase()}.`
+                : modeConfig.elementFluxTitle;
         }
         if (calculateElementForcesBtn) {
             calculateElementForcesBtn.disabled = calculationState.displacementsDirty;
             calculateElementForcesBtn.title = calculationState.displacementsDirty
-                ? 'Calculate displacements before evaluating element forces.'
-                : 'Calculate the internal force within each element.';
+                ? `${modeConfig.primarySolveButton} before evaluating ${modeConfig.elementForceHeading.toLowerCase()}.`
+                : modeConfig.elementForceTitle;
         }
     };
 
@@ -203,6 +331,13 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/([%$&#_{}])/g, '\\$1')
             .replace(/~/g, '\\textasciitilde{}')
             .replace(/\^/g, '\\textasciicircum{}');
+    };
+    const escapeHtml = (value = '') => {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
     };
 
     const formatEngineeringNotationForLatex = (value, precision = 3, wrapInMathMode = true) => {
@@ -436,6 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderDiagramSvg = (layout) => {
         if (!layout) return '';
+        const modeConfig = getModeConfig();
         const { svgWidth, svgHeight, nodeRadius, nodePositions, elements, fixedNodes, forces } = layout;
         let svg = `<svg width="${svgWidth}" height="${svgHeight}" style="font-family: sans-serif;">`;
         svg += `
@@ -470,7 +606,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         forces.forEach(force => {
             svg += `<line x1="${force.startX}" y1="${force.startY}" x2="${force.endX}" y2="${force.endY}" stroke="#c0392b" stroke-width="2" marker-end="url(#arrowhead)" />`;
-            svg += `<text x="${force.labelX}" y="${force.labelY}" text-anchor="middle" font-size="12" fill="#c0392b">${force.value}</text>`;
+            const labelText = `${force.value} ${modeConfig.diagramLoadLabel}`.trim();
+            svg += `<text x="${force.labelX}" y="${force.labelY}" text-anchor="middle" font-size="12" fill="#c0392b">${labelText}</text>`;
         });
 
         svg += '</svg>';
@@ -479,6 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderDiagramTikz = (layout, decimalPlaces = 4) => {
         if (!layout) return '';
+        const modeConfig = getModeConfig();
         const tikzScale = 0.02;
         let tikz = `\\begin{tikzpicture}[x=${tikzScale}cm,y=-${tikzScale}cm,>=Stealth]\n`;
 
@@ -507,7 +645,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         layout.forces.forEach(force => {
-            const formattedForce = formatEngineeringNotationForLatex(force.value, decimalPlaces);
+            const numericLatex = formatEngineeringNotationForLatex(force.value, decimalPlaces, false);
+            const formattedForce = `$${numericLatex}\\,\\text{${escapeLatex(modeConfig.diagramLoadLabel)}}$`;
             tikz += `    \\draw[->,line width=1pt,color=red!70!black] (${force.startX},${force.startY}) -- (${force.endX},${force.endY});\n`;
             tikz += `    \\node[text=red!70!black,font=\\scriptsize,above] at (${force.labelX},${force.labelY}){${formattedForce}};\n`;
         });
@@ -550,16 +689,20 @@ document.addEventListener('DOMContentLoaded', () => {
             length: row.querySelector('.length-input').value,
             calculateK: row.querySelector('.calculate-k-checkbox').checked
         }));
-        const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
+        const fixedNodes = collectFixedNodesData().map(node => ({
+            fixed: !!node.fixed,
+            value: node.value
+        }));
         const forces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => input.value);
-        const state = { 
-            numNodes: numNodesInput.value, 
-            globalMultiplier: globalMultiplierInput.value, 
+        const state = {
+            numNodes: numNodesInput.value,
+            globalMultiplier: globalMultiplierInput.value,
             youngsModulus: youngsModulusInput.value,
-            decimalPlaces: decimalPlacesInput.value, 
-            elements, 
-            fixedNodes, 
-            forces 
+            decimalPlaces: decimalPlacesInput.value,
+            elements,
+            fixedNodes,
+            forces,
+            analysisMode
         };
         return state;
     };
@@ -576,6 +719,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
+            setAnalysisMode(getValidMode(state.analysisMode || (analysisModeSelect ? analysisModeSelect.value : 'structural')), { skipSave: true, refreshInputs: false });
+
             numNodesInput.value = state.numNodes || 2;
             globalMultiplierInput.value = state.globalMultiplier || 1;
             youngsModulusInput.value = state.youngsModulus || '210e9';
@@ -600,6 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             generateBoundaryConditionsUI(parseInt(numNodesInput.value), state.fixedNodes);
             generateForcesUI(parseInt(numNodesInput.value), state.forces);
+            updateModeUI({ refreshInputs: false });
 
             markMatrixDirty();
 
@@ -659,6 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const resetAppToDefault = (shouldSave = true) => {
+        setAnalysisMode('structural', { skipSave: true, refreshInputs: false });
         numNodesInput.value = 2;
         globalMultiplierInput.value = 1;
         document.getElementById('youngs-modulus').value = '210e9';
@@ -685,6 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearPresetIllustrations();
 
         markMatrixDirty();
+        updateModeUI({ refreshInputs: false });
 
         if (shouldSave) {
             saveState();
@@ -694,27 +842,161 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CORE UI & MATRIX GENERATION ---
 
     const generateBoundaryConditionsUI = (numNodes, fixedStates = []) => {
+        const modeConfig = getModeConfig();
         fixedNodesContainer.innerHTML = '';
         for (let i = 1; i <= numNodes; i++) {
-            const isChecked = fixedStates[i - 1] || false;
+            const rawState = fixedStates[i - 1];
+            const isChecked = typeof rawState === 'object' ? !!rawState.fixed : !!rawState;
+            const presetValue = typeof rawState === 'object' && rawState.value !== undefined ? rawState.value : '';
             const item = document.createElement('div');
             item.classList.add('fixed-node-item');
-            item.innerHTML = `<input type="checkbox" id="fixed-node-${i}" ${isChecked ? 'checked' : ''} title="Tick to fix this node, preventing any displacement."><label for="fixed-node-${i}">Node ${i}</label>`;
+            item.innerHTML = `
+                <div class="fixed-node-controls">
+                    <input type="checkbox" id="fixed-node-${i}" ${isChecked ? 'checked' : ''} title="${modeConfig.fixedNodeTitle}">
+                    <label for="fixed-node-${i}">Node ${i}</label>
+                </div>
+                <div class="fixed-node-value">
+                    <label class="sr-only" for="fixed-value-${i}">${modeConfig.boundaryValueLabel}</label>
+                    <input type="number" id="fixed-value-${i}" class="fixed-value-input" value="${presetValue !== undefined ? presetValue : ''}" placeholder="${modeConfig.boundaryValuePlaceholder}" title="${modeConfig.boundaryValueTitle}" ${isChecked ? '' : 'disabled'}>
+                </div>
+            `;
             fixedNodesContainer.appendChild(item);
+            const checkbox = item.querySelector(`#fixed-node-${i}`);
+            const valueInput = item.querySelector(`#fixed-value-${i}`);
+            if (checkbox && valueInput) {
+                checkbox.addEventListener('change', () => {
+                    valueInput.disabled = !checkbox.checked;
+                    if (!checkbox.checked) {
+                        valueInput.value = '';
+                    }
+                });
+            }
         }
         flashTarget(fixedNodesContainer);
     };
 
     const generateForcesUI = (numNodes, forceValues = []) => {
+        const modeConfig = getModeConfig();
         forcesContainer.innerHTML = '';
         for (let i = 1; i <= numNodes; i++) {
             const value = forceValues[i - 1] || 0;
             const item = document.createElement('div');
             item.classList.add('force-item');
-            item.innerHTML = `<label for="force-${i}">F<sub>${i}</sub>:</label><input type="number" id="force-${i}" value="${value}" title="Enter the external force applied at this node.">`;
+            item.innerHTML = `<label for="force-${i}">${modeConfig.loadSymbol}<sub>${i}</sub>:</label><input type="number" id="force-${i}" value="${value}" title="${modeConfig.loadInputTitle}">`;
             forcesContainer.appendChild(item);
         }
         flashTarget(forcesContainer);
+    };
+
+    const collectFixedNodesData = () => {
+        const items = Array.from(fixedNodesContainer.querySelectorAll('.fixed-node-item'));
+        if (!items.length) {
+            const fallbackCount = parseInt(numNodesInput.value, 10) || 0;
+            return Array.from({ length: fallbackCount }, () => ({ fixed: false, value: '' }));
+        }
+        return items.map(item => {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            const valueInput = item.querySelector('.fixed-value-input');
+            return {
+                fixed: checkbox ? checkbox.checked : false,
+                value: valueInput ? valueInput.value : ''
+            };
+        });
+    };
+    const captureForceValues = () => Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => input.value);
+
+    const refreshBoundaryAndForceUI = () => {
+        const numNodes = parseInt(numNodesInput.value, 10) || 2;
+        generateBoundaryConditionsUI(numNodes, collectFixedNodesData());
+        generateForcesUI(numNodes, captureForceValues());
+    };
+
+    const updateElementRowsForMode = () => {
+        const modeConfig = getModeConfig();
+        elementsContainer.querySelectorAll('.element-row').forEach(row => {
+            const stiffnessLabel = row.querySelector('.stiffness-group label');
+            if (stiffnessLabel) stiffnessLabel.textContent = modeConfig.elementCoefficientLabel;
+            const stiffnessInput = row.querySelector('.stiffness-input');
+            if (stiffnessInput) stiffnessInput.title = modeConfig.elementCoefficientDescription;
+            const autoCheckbox = row.querySelector('.calculate-k-checkbox');
+            if (autoCheckbox) autoCheckbox.title = modeConfig.elementAutoDescription;
+            const autoLabel = row.querySelector('.calculate-k-container label');
+            if (autoLabel) autoLabel.textContent = modeConfig.elementAutoLabel;
+        });
+    };
+
+    const updateModeUI = ({ refreshInputs = true } = {}) => {
+        const modeConfig = getModeConfig();
+        if (analysisModeSelect && analysisModeSelect.value !== analysisMode) {
+            analysisModeSelect.value = analysisMode;
+        }
+        if (bulkPropertyLabelElement) {
+            bulkPropertyLabelElement.textContent = modeConfig.bulkPropertyLabel;
+        }
+        if (youngsModulusInput) {
+            youngsModulusInput.title = modeConfig.bulkPropertyDescription;
+        }
+        if (forcesTitleElement) {
+            forcesTitleElement.textContent = modeConfig.loadHeading;
+        }
+        if (forcesDescriptionElement) {
+            forcesDescriptionElement.textContent = modeConfig.loadDescription;
+        }
+        if (kTitleElement) {
+            kTitleElement.textContent = modeConfig.matrixHeading;
+        }
+        if (invKTitleElement) {
+            invKTitleElement.textContent = 'Inverse of Reduced Matrix (K_r⁻¹)';
+        }
+        if (calculateDisplacementsBtn) {
+            calculateDisplacementsBtn.textContent = modeConfig.primarySolveButton;
+            calculateDisplacementsBtn.title = modeConfig.primarySolveTitle;
+        }
+        if (calculateStressesBtn) {
+            calculateStressesBtn.textContent = modeConfig.elementFluxButton;
+        }
+        if (calculateElementForcesBtn) {
+            calculateElementForcesBtn.textContent = modeConfig.elementForceButton;
+        }
+        if (generateMatrixBtn) {
+            generateMatrixBtn.textContent = modeConfig.matrixButtonText;
+            generateMatrixBtn.title = modeConfig.matrixButtonTitle;
+        }
+        if (displacementsTitleElement) {
+            displacementsTitleElement.textContent = modeConfig.primaryResultHeading;
+        }
+        if (reactionTitleElement) {
+            reactionTitleElement.textContent = modeConfig.reactionHeading;
+        }
+        if (stressesTitleElement) {
+            stressesTitleElement.textContent = modeConfig.elementFluxHeading;
+        }
+        if (elementForcesTitleElement) {
+            elementForcesTitleElement.textContent = modeConfig.elementForceHeading;
+        }
+        fixedNodesContainer.querySelectorAll('.fixed-value-input').forEach(input => {
+            input.placeholder = modeConfig.boundaryValuePlaceholder;
+            input.title = modeConfig.boundaryValueTitle;
+        });
+        updateElementRowsForMode();
+        if (refreshInputs) {
+            refreshBoundaryAndForceUI();
+        }
+        updateActionButtonStates();
+    };
+
+    const setAnalysisMode = (mode, { skipSave = false, refreshInputs = true } = {}) => {
+        const nextMode = getValidMode(mode);
+        if (analysisMode === nextMode && refreshInputs) {
+            updateModeUI({ refreshInputs });
+            return;
+        }
+        analysisMode = nextMode;
+        updateModeUI({ refreshInputs });
+        markMatrixDirty();
+        if (!skipSave) {
+            saveState();
+        }
     };
 
     const loadCustomExample = (config) => {
@@ -726,8 +1008,13 @@ document.addEventListener('DOMContentLoaded', () => {
             elements = [],
             fixedNodes = [],
             forces = [],
-            autoGenerateMatrix = true
+            autoGenerateMatrix = true,
+            analysisMode: presetMode
         } = config;
+
+        if (presetMode) {
+            setAnalysisMode(presetMode, { skipSave: true, refreshInputs: false });
+        }
 
         numNodesInput.value = numNodes;
         globalMultiplierInput.value = globalMultiplier;
@@ -771,6 +1058,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     const addElementRow = (node1 = 1, node2 = 2, stiffness = 1, area = 1, label = '', length = 1) => {
+        const modeConfig = getModeConfig();
         elementCount++;
         const elementRow = document.createElement('div');
         elementRow.classList.add('element-row', 'flash-target');
@@ -808,12 +1096,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         <input type="number" id="length-${elementCount}" class="length-input" value="${length}" step="any" title="The length of the element, used for calculating stiffness.">
                     </div>
                     <div class="element-input-group stiffness-group">
-                        <label for="stiffness-${elementCount}">Stiffness (k)</label>
+                        <label for="stiffness-${elementCount}">${modeConfig.elementCoefficientLabel}</label>
                         <div class="stiffness-input-wrapper">
-                            <input type="number" id="stiffness-${elementCount}" class="stiffness-input" value="${stiffness}" step="any" title="The stiffness value of the element. Can be calculated automatically.">
+                            <input type="number" id="stiffness-${elementCount}" class="stiffness-input" value="${stiffness}" step="any" title="${modeConfig.elementCoefficientDescription}">
                             <div class="calculate-k-container">
-                                <input type="checkbox" id="calc-k-cb-${elementCount}" class="calculate-k-checkbox" title="Tick to calculate stiffness automatically from E, A, and l.">
-                                <label for="calc-k-cb-${elementCount}">Calc k</label>
+                                <input type="checkbox" id="calc-k-cb-${elementCount}" class="calculate-k-checkbox" title="${modeConfig.elementAutoDescription}">
+                                <label for="calc-k-cb-${elementCount}">${modeConfig.elementAutoLabel}</label>
                             </div>
                         </div>
                     </div>
@@ -899,6 +1187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const generateAndDisplayMatrix = () => {
+        const modeConfig = getModeConfig();
         const numNodes = parseInt(numNodesInput.value);
         if (isNaN(numNodes) || numNodes < 2 || numNodes > 10) {
             alert('Please enter a valid number of nodes (between 2 and 10).');
@@ -916,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateActionButtonStates();
             const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
             const multiplierText = formatMultiplier(globalMultiplier);
-            displayMatrix(K, 'matrix-container', 'k-title', 'Global Stiffness Matrix (K)', null, multiplierText, 'global-matrix-multiplier', globalMultiplier);
+            displayMatrix(K, 'matrix-container', 'k-title', modeConfig.matrixHeading, null, multiplierText, 'global-matrix-multiplier', globalMultiplier);
             return true;
         } catch (error) {
             alert(error.message);
@@ -983,8 +1272,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!generated) return null;
         }
         const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
-        const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
-        const freeNodesIndices = fixedNodes.map((isFixed, i) => (isFixed ? -1 : i)).filter(i => i !== -1);
+        const boundaryStates = collectFixedNodesData();
+        const fixedNodesFlags = boundaryStates.length ? boundaryStates.map(node => !!node.fixed) : Array.from({ length: parseInt(numNodesInput.value, 10) || 0 }, () => false);
+        const freeNodesIndices = fixedNodesFlags.map((isFixed, i) => (isFixed ? -1 : i)).filter(i => i !== -1);
         if (freeNodesIndices.length === 0) {
             alert('Cannot invert: No free nodes. Please unfix at least one node.');
             return null;
@@ -1006,7 +1296,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         calculationState.inverseDirty = false;
         updateActionButtonStates();
-        return { invertedK, freeNodesIndices, globalMultiplier };
+        const fixedNodesIndices = fixedNodesFlags.map((isFixed, i) => (isFixed ? i : -1)).filter(i => i !== -1);
+        return { invertedK, freeNodesIndices, fixedNodesIndices, globalMultiplier };
     };
 
     const exampleScenarios = {
@@ -1034,6 +1325,30 @@ document.addEventListener('DOMContentLoaded', () => {
             ],
             fixedNodes: [true, false, false, false],
             forces: [0, 0, 0, -40000]
+        },
+        thermalExteriorWall: {
+            analysisMode: 'thermal',
+            numNodes: 7,
+            globalMultiplier: 1,
+            decimalPlaces: 4,
+            elements: [
+                { node1: 1, node2: 2, area: 14, length: 1, stiffness: 467.46, label: 'Outside film' },
+                { node1: 2, node2: 3, area: 14, length: 1, stiffness: 97.72, label: 'Wood siding' },
+                { node1: 3, node2: 4, area: 14, length: 1, stiffness: 60.48, label: 'Sheathing' },
+                { node1: 4, node2: 5, area: 14, length: 1, stiffness: 7.238, label: 'Insulation batt' },
+                { node1: 5, node2: 6, area: 14, length: 1, stiffness: 176.54, label: 'Gypsum board' },
+                { node1: 6, node2: 7, area: 14, length: 1, stiffness: 116.9, label: 'Inside film' }
+            ],
+            fixedNodes: [
+                { fixed: true, value: -6.7 },
+                { fixed: false, value: '' },
+                { fixed: false, value: '' },
+                { fixed: false, value: '' },
+                { fixed: false, value: '' },
+                { fixed: false, value: '' },
+                { fixed: true, value: 21 }
+            ],
+            forces: [0, 0, 0, 0, 0, 0, 0]
         }
     };
 
@@ -1041,8 +1356,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     numNodesInput.addEventListener('change', () => {
         const numNodes = parseInt(numNodesInput.value);
-        generateBoundaryConditionsUI(numNodes);
-        generateForcesUI(numNodes);
+        generateBoundaryConditionsUI(numNodes, collectFixedNodesData());
+        generateForcesUI(numNodes, captureForceValues());
         saveState();
         markMatrixDirty();
     });
@@ -1053,10 +1368,12 @@ document.addEventListener('DOMContentLoaded', () => {
         markMatrixDirty();
     });
 
-    fixedNodesContainer.addEventListener('change', () => {
+    const handleBoundaryChange = () => {
         saveState();
         markMatrixDirty();
-    });
+    };
+    fixedNodesContainer.addEventListener('change', handleBoundaryChange);
+    fixedNodesContainer.addEventListener('input', handleBoundaryChange);
 
     forcesContainer.addEventListener('input', () => {
         saveState();
@@ -1104,6 +1421,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     calculateDisplacementsBtn.addEventListener('click', () => {
+        const modeConfig = getModeConfig();
         // Clear previous downstream results
         reactionForcesResult = [];
         elementStressesResult = [];
@@ -1114,39 +1432,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const result = getInvertedReducedMatrix();
         if (!result) return;
-        const { invertedK, freeNodesIndices, globalMultiplier } = result;
+        const { invertedK, freeNodesIndices, fixedNodesIndices, globalMultiplier } = result;
         const allForces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
+        const boundaryStates = collectFixedNodesData();
+        const prescribedValues = boundaryStates.length
+            ? boundaryStates.map(node => (node.fixed ? (parseFloat(node.value) || 0) : 0))
+            : Array.from({ length: parseInt(numNodesInput.value, 10) || 0 }, () => 0);
         let displacementResult;
         try {
             displacementResult = computeDisplacements({
                 invertedReducedMatrix: invertedK,
                 freeNodesIndices,
+                fixedNodesIndices,
                 forces: allForces,
                 globalMatrix: globalStiffnessMatrix,
-                globalMultiplier
+                globalMultiplier,
+                knownDisplacements: prescribedValues
             });
         } catch (error) {
             alert(error.message);
             return;
         }
-        const { displacements, fullDisplacementVector: newFullDisplacements, reactionForces } = displacementResult;
-        let tableHTML = '<table><thead><tr><th>Node</th><th>Displacement (d)</th></tr></thead><tbody>';
-        freeNodesIndices.forEach((nodeIndex, i) => {
-            const { value: dispValue, exponent: dispExponent } = formatEngineeringNotation(displacements[i], parseInt(decimalPlacesInput.value));
-            tableHTML += `<tr><td>${nodeIndex + 1}</td><td>${dispValue} x 10<sup>${dispExponent}</sup></td></tr>`;
+        const { fullDisplacementVector: newFullDisplacements, reactionForces } = displacementResult;
+        let tableHTML = `<table><thead><tr><th>Node</th><th>${modeConfig.primaryResultColumn}</th></tr></thead><tbody>`;
+        newFullDisplacements.forEach((value, index) => {
+            const { value: dispValue, exponent: dispExponent } = formatEngineeringNotation(value, parseInt(decimalPlacesInput.value));
+            tableHTML += `<tr><td>${index + 1}</td><td>${dispValue} x 10<sup>${dispExponent}</sup></td></tr>`;
         });
         tableHTML += '</tbody></table>';
         displacementsContainer.innerHTML = tableHTML;
         flashTarget(displacementsContainer);
 
         // --- REACTION FORCE CALCULATION ---
-        const numNodes = parseInt(numNodesInput.value);
-        const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input[type="checkbox"]')).map(cb => cb.checked);
-        const fixedNodesIndices = fixedNodes.map((isFixed, i) => (isFixed ? i : -1)).filter(i => i !== -1);
-
         fullDisplacementVector = newFullDisplacements;
 
-        let reactionTableHTML = '<table><thead><tr><th>Node</th><th>Reaction Force (R)</th></tr></thead><tbody>';
+        let reactionTableHTML = `<table><thead><tr><th>Node</th><th>${modeConfig.reactionColumn}</th></tr></thead><tbody>`;
         if (fixedNodesIndices.length > 0) {
             fixedNodesIndices.forEach(nodeIndex => {
                 const force = reactionForces[nodeIndex];
@@ -1155,7 +1475,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 reactionTableHTML += `<tr><td>${nodeIndex + 1}</td><td>${forceValue} x 10<sup>${forceExponent}</sup></td></tr>`;
             });
         } else {
-            reactionTableHTML += '<tr><td colspan="2">No fixed nodes to calculate reaction forces for.</td></tr>';
+            reactionTableHTML += `<tr><td colspan="2">${modeConfig.reactionNoneMessage}</td></tr>`;
         }
         reactionTableHTML += '</tbody></table>';
         reactionForcesContainer.innerHTML = reactionTableHTML;
@@ -1246,6 +1566,20 @@ document.addEventListener('DOMContentLoaded', () => {
         registerPresetIllustration('example23');
     });
 
+    if (loadExample4Btn) {
+        loadExample4Btn.addEventListener('click', () => {
+            loadCustomExample(exampleScenarios.thermalExteriorWall);
+            modalImg.src = 'images/example_2_4_wall.svg';
+            modalImg.alt = 'Example 2.4 Exterior Wall Diagram';
+            const modalContent = document.querySelector('.modal-content');
+            if (modalContent.resetDragPosition) {
+                modalContent.resetDragPosition();
+            }
+            modal.style.display = 'flex';
+            registerPresetIllustration('example24');
+        });
+    }
+
     if (activity23Btn) {
         activity23Btn.addEventListener('click', () => {
             numNodesInput.value = 5;
@@ -1282,6 +1616,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     decimalPlacesInput.addEventListener('input', saveState);
+    if (analysisModeSelect) {
+        analysisModeSelect.addEventListener('change', () => {
+            setAnalysisMode(analysisModeSelect.value);
+        });
+    }
 
     const formatMatrixForDisplay = (matrix, highlightIndices = []) => {
         const decimalPlaces = parseInt(decimalPlacesInput.value);
@@ -1316,7 +1655,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let stepsHTML = '';
         let K = Array(numNodes).fill(0).map(() => Array(numNodes).fill(0));
 
-        stepsHTML += '<h3>Initial Global Matrix (K)</h3>';
+        stepsHTML += `<h3>Initial ${modeConfig.matrixHeading || 'Global Matrix'}</h3>`;
         stepsHTML += formatMatrixForDisplay(K);
         stepsHTML += '<hr>';
 
@@ -1335,13 +1674,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             stepsHTML += `<h3>Step ${index + 1}: Adding Element ${index + 1}</h3>`;
-            stepsHTML += `<p>Element connecting <b>Node ${nodeId1}</b> and <b>Node ${nodeId2}</b> with stiffness <b>k = ${stiffness}</b></p>`;
+            stepsHTML += `<p>Element connecting <b>Node ${nodeId1}</b> and <b>Node ${nodeId2}</b> with ${modeConfig.elementCoefficientLabel} <b>= ${stiffness}</b></p>`;
 
             const i = nodeId1 - 1;
             const j = nodeId2 - 1;
 
             const elemK = [[stiffness, -stiffness], [-stiffness, stiffness]];
-            stepsHTML += '<h4>Element Stiffness Matrix</h4>';
+            stepsHTML += `<h4>${modeConfig.elementMatrixHeading}</h4>`;
             stepsHTML += `<p>For nodes ${nodeId1} and ${nodeId2}:</p>`;
             stepsHTML += formatMatrixForDisplay(elemK);
 
@@ -1351,8 +1690,8 @@ document.addEventListener('DOMContentLoaded', () => {
             K[i][j] -= stiffness;
             K[j][i] -= stiffness;
 
-            stepsHTML += '<h4>Updated Global Matrix (K)</h4>';
-            stepsHTML += '<p>The element stiffness values are added to the global matrix at positions corresponding to the nodes.</p>';
+            stepsHTML += `<h4>Updated ${modeConfig.matrixHeading || 'Global Matrix'}</h4>`;
+            stepsHTML += `<p>The element ${coefficientDescriptor.toLowerCase()} values are added to the global matrix at positions corresponding to the nodes.</p>`;
             stepsHTML += formatMatrixForDisplay(K, [[i, i], [j, j], [i, j], [j, i]]);
             stepsHTML += '<hr>';
         });
@@ -1387,8 +1726,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (exportKBtn) {
         exportKBtn.addEventListener('click', () => {
             if (matrixForExport.K) {
+                const modeConfig = getModeConfig();
                 const latexString = generateLatexString(matrixForExport.K, matrixForExport.kHeaders, matrixForExport.kNumericMultiplier);
-                promptWithLatex(latexString, "Global Stiffness Matrix (K)");
+                promptWithLatex(latexString, modeConfig.matrixHeading);
             } else {
                 alert('Please generate the matrix first.');
             }
@@ -1409,8 +1749,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (calculateStressesBtn) {
         calculateStressesBtn.addEventListener('click', () => {
+            const modeConfig = getModeConfig();
             if (fullDisplacementVector.length === 0) {
-                alert('Please calculate displacements first.');
+                alert(`Please ${modeConfig.primarySolveButton.toLowerCase()} first.`);
                 return;
             }
 
@@ -1418,7 +1759,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const elements = collectElementsData();
             elementStressesResult = calculateElementStressesCore(elements, fullDisplacementVector, globalMultiplier);
 
-            let tableHTML = '<table><thead><tr><th>Element</th><th>Stress (σ)</th></tr></thead><tbody>';
+            let tableHTML = `<table><thead><tr><th>Element</th><th>${modeConfig.elementFluxColumn}</th></tr></thead><tbody>`;
             elementStressesResult.forEach(result => {
                 if (isNaN(result.stress)) {
                     tableHTML += `<tr><td>${result.label}</td><td>Invalid Input</td></tr>`;
@@ -1435,8 +1776,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (calculateElementForcesBtn) {
         calculateElementForcesBtn.addEventListener('click', () => {
+            const modeConfig = getModeConfig();
             if (fullDisplacementVector.length === 0) {
-                alert('Please calculate displacements first.');
+                alert(`Please ${modeConfig.primarySolveButton.toLowerCase()} first.`);
                 return;
             }
 
@@ -1444,7 +1786,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const elements = collectElementsData();
             elementForcesResult = calculateElementForcesCore(elements, fullDisplacementVector, globalMultiplier);
 
-            let tableHTML = '<table><thead><tr><th>Element</th><th>Force (f)</th></tr></thead><tbody>';
+            let tableHTML = `<table><thead><tr><th>Element</th><th>${modeConfig.elementForceColumn}</th></tr></thead><tbody>`;
             elementForcesResult.forEach(result => {
                 if (isNaN(result.force)) {
                     tableHTML += `<tr><td>${result.label}</td><td>Invalid Input</td></tr>`;
@@ -1466,13 +1808,14 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => btn.classList.remove('is-flashing'), 500);
         }
 
+        const modeConfig = getModeConfig();
         const parsedDecimalPlaces = parseInt(decimalPlacesInput.value, 10);
         const decimalPlaces = Number.isFinite(parsedDecimalPlaces) ? parsedDecimalPlaces : 4;
         const nodeCount = parseInt(numNodesInput.value, 10) || 0;
-        const youngsValue = youngsModulusInput ? parseFloat(youngsModulusInput.value) : NaN;
+        const bulkPropertyValue = youngsModulusInput ? parseFloat(youngsModulusInput.value) : NaN;
         const globalMultiplierValue = parseFloat(globalMultiplierInput.value);
         const timestamp = new Date();
-        const timestampDisplay = timestamp.toISOString().replace('T', ' ').replace('Z', ' UTC');
+        const timestampDisplay = timestamp.toISOString().replace(/T/, ' ').replace(/Z$/, ' UTC');
         const diagramResult = computeDiagramLayout();
         const diagramLayout = diagramResult.layout;
         const diagramError = diagramResult.error;
@@ -1500,10 +1843,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input:checked')).map(cb => cb.id.split('-')[2]);
-        const forces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
-        const appliedForces = forces.map((f, i) => ({ node: i + 1, force: f })).filter(item => item.force !== 0);
-        const totalAppliedLoad = appliedForces.length ? appliedForces.reduce((sum, item) => sum + item.force, 0) : null;
-        const totalAbsLoad = appliedForces.length ? appliedForces.reduce((sum, item) => sum + Math.abs(item.force), 0) : null;
+        const nodalLoads = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
+        const appliedLoads = nodalLoads.map((value, index) => ({ node: index + 1, value })).filter(item => item.value !== 0);
+        const totalAppliedLoad = appliedLoads.length ? appliedLoads.reduce((sum, item) => sum + item.value, 0) : null;
+        const totalAbsLoad = appliedLoads.length ? appliedLoads.reduce((sum, item) => sum + Math.abs(item.value), 0) : null;
 
         const formatOptionalValue = (value, placeholder = '---') => Number.isFinite(value) ? formatEngineeringNotationForLatex(value, decimalPlaces) : placeholder;
         const formatList = (items) => {
@@ -1516,21 +1859,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const computedOutputs = [];
         if (matrixForExport.K) computedOutputs.push('$K$');
         if (matrixForExport.invK) computedOutputs.push('$K_r^{-1}$');
-        if (fullDisplacementVector.length > 0) computedOutputs.push('$d$');
-        if (reactionForcesResult.length > 0) computedOutputs.push('$R$');
-        if (elementForcesResult.length > 0) computedOutputs.push('$f$');
-        if (elementStressesResult.length > 0) computedOutputs.push('$\\sigma$');
+        if (fullDisplacementVector.length > 0) computedOutputs.push(modeConfig.primarySymbol);
+        if (reactionForcesResult.length > 0) computedOutputs.push(modeConfig.reactionSymbol);
+        if (elementForcesResult.length > 0) computedOutputs.push(modeConfig.elementForceSymbol);
+        if (elementStressesResult.length > 0) computedOutputs.push(modeConfig.elementFluxSymbol);
 
-        const autoKCount = elementsData.filter(el => el.calculateK).length;
+        const autoCoefficientCount = elementsData.filter(el => el.calculateK).length;
         const validLengths = elementsData.map(el => el.length).filter(val => Number.isFinite(val));
         const validAreas = elementsData.map(el => el.area).filter(val => Number.isFinite(val));
-        const validStiffnesses = elementsData.map(el => el.stiffness).filter(val => Number.isFinite(val));
+        const validCoefficients = elementsData.map(el => el.stiffness).filter(val => Number.isFinite(val));
         const totalLength = validLengths.length ? validLengths.reduce((sum, val) => sum + val, 0) : null;
         const shortestLength = validLengths.length ? Math.min(...validLengths) : null;
         const longestLength = validLengths.length ? Math.max(...validLengths) : null;
         const minArea = validAreas.length ? Math.min(...validAreas) : null;
         const maxArea = validAreas.length ? Math.max(...validAreas) : null;
-        const averageStiffness = validStiffnesses.length ? validStiffnesses.reduce((sum, val) => sum + val, 0) / validStiffnesses.length : null;
+        const averageCoefficient = validCoefficients.length ? validCoefficients.reduce((sum, val) => sum + val, 0) / validCoefficients.length : null;
 
         const summaryLines = [];
         summaryLines.push(`% LaTeX Summary from Stiffness Matrix Generator\n`);
@@ -1544,17 +1887,17 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryLines.push(`\\usepackage{geometry}\n`);
         summaryLines.push(`\\geometry{a4paper, margin=1in}\n\n`);
         summaryLines.push(`\\begin{document}\n\n`);
-        summaryLines.push(`\\title{Stiffness Matrix Analysis Summary}\n`);
+        summaryLines.push(`\\title{${escapeLatex(modeConfig.displayName)} Summary}\n`);
         summaryLines.push(`\\author{Stiffness Matrix Generator}\n`);
         summaryLines.push(`\\date{${escapeLatex(timestampDisplay)}}\n`);
         summaryLines.push(`\\maketitle\n\n`);
 
         const fixedNodesText = fixedNodes.length
-            ? `${fixedNodes.length} fixed node${fixedNodes.length === 1 ? '' : 's'}`
-            : 'no prescribed supports';
-        const loadedNodesText = appliedForces.length
-            ? `${appliedForces.length} loaded node${appliedForces.length === 1 ? '' : 's'}`
-            : 'no loaded nodes';
+            ? `${fixedNodes.length} ${modeConfig.boundaryDescription}`
+            : `no ${modeConfig.boundaryDescription}`;
+        const loadedNodesText = appliedLoads.length
+            ? `${appliedLoads.length} ${modeConfig.appliedLoadVerb}`
+            : `no ${modeConfig.appliedLoadVerb}`;
         const outputsText = computedOutputs.length
             ? `Computed outputs include ${formatList(computedOutputs)}.`
             : 'No solver outputs have been generated yet; run the action buttons and regenerate this summary.';
@@ -1570,23 +1913,23 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryLines.push(`Elements & ${elementsData.length} \\\\\n`);
         summaryLines.push(`Fixed Nodes & ${fixedNodes.length ? escapeLatex(fixedNodes.join(', ')) : 'None'} \\\\\n`);
         summaryLines.push(`Free Degrees of Freedom & ${Math.max(nodeCount - fixedNodes.length, 0)} \\\\\n`);
-        summaryLines.push(`Loaded Nodes & ${appliedForces.length ? escapeLatex(appliedForces.map(f => f.node).join(', ')) : 'None'} \\\\\n`);
-        summaryLines.push(`Net External Load & ${totalAppliedLoad !== null ? formatEngineeringNotationForLatex(totalAppliedLoad, decimalPlaces) : 'N/A'} \\\\\n`);
-        summaryLines.push(`Total Applied |Load| & ${totalAbsLoad !== null ? formatEngineeringNotationForLatex(totalAbsLoad, decimalPlaces) : 'N/A'} \\\\\n`);
+        summaryLines.push(`${escapeLatex(modeConfig.loadedNodesLabel || 'Loaded Nodes')} & ${appliedLoads.length ? escapeLatex(appliedLoads.map(f => f.node).join(', ')) : 'None'} \\\\\n`);
+        summaryLines.push(`Net ${escapeLatex(modeConfig.loadValueLabel)} & ${totalAppliedLoad !== null ? formatEngineeringNotationForLatex(totalAppliedLoad, decimalPlaces) : 'N/A'} \\\\\n`);
+        summaryLines.push(`Total Applied |${escapeLatex(modeConfig.loadValueLabel)}| & ${totalAbsLoad !== null ? formatEngineeringNotationForLatex(totalAbsLoad, decimalPlaces) : 'N/A'} \\\\\n`);
         summaryLines.push(`Decimal Places & ${Number.isFinite(parsedDecimalPlaces) ? parsedDecimalPlaces : 'Default (4)'} \\\\\n`);
         summaryLines.push(`\\end{tabular}\n\n`);
 
         summaryLines.push(`\\subsection*{Global Parameters}\n`);
         summaryLines.push(`\\begin{itemize}\n`);
         summaryLines.push(`    \\item Number of Nodes: ${nodeCount || '---'}\n`);
-        summaryLines.push(`    \\item Young's Modulus (E): ${formatOptionalValue(youngsValue)}\n`);
+        summaryLines.push(`    \\item ${escapeLatex(modeConfig.bulkPropertyLabel)}: ${formatOptionalValue(bulkPropertyValue)}\n`);
         summaryLines.push(`    \\item Global Multiplier: ${formatOptionalValue(globalMultiplierValue)}\n`);
         summaryLines.push(`\\end{itemize}\n\n`);
 
         summaryLines.push(`\\subsection*{Element Inventory}\n`);
         summaryLines.push(`\\begin{tabular}{|l|c|c|r|r|r|c|}\n`);
         summaryLines.push(`\\hline\n`);
-        summaryLines.push(`\\textbf{Label} & \\textbf{Node Left} & \\textbf{Node Right} & \\textbf{Area (A)} & \\textbf{Length (l)} & \\textbf{Stiffness (k)} & \\textbf{Source} \\\\\n`);
+        summaryLines.push(`\\textbf{Label} & \\textbf{Node Left} & \\textbf{Node Right} & \\textbf{Area (A)} & \\textbf{Length (l)} & \\textbf{${escapeLatex(modeConfig.elementCoefficientLabel)}} & \\textbf{Source} \\\\\n`);
         summaryLines.push(`\\hline\n`);
         if (elementsData.length > 0) {
             elementsData.forEach(element => {
@@ -1606,23 +1949,23 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryLines.push(`Longest Length & ${formatOptionalValue(longestLength)} \\\\\n`);
         summaryLines.push(`Minimum Area & ${formatOptionalValue(minArea)} \\\\\n`);
         summaryLines.push(`Maximum Area & ${formatOptionalValue(maxArea)} \\\\\n`);
-        summaryLines.push(`Average Stiffness & ${formatOptionalValue(averageStiffness)} \\\\\n`);
-        summaryLines.push(`Auto-calculated k Entries & ${autoKCount} \\\\\n`);
+        summaryLines.push(`Average ${escapeLatex(modeConfig.elementCoefficientLabel)} & ${formatOptionalValue(averageCoefficient)} \\\\\n`);
+        summaryLines.push(`Auto-calculated ${escapeLatex(modeConfig.elementCoefficientLabel)} Entries & ${autoCoefficientCount} \\\\\n`);
         summaryLines.push(`\\hline\n\\end{tabular}\n\n`);
 
-        summaryLines.push(`\\subsection*{Applied Forces}\n`);
-        if (appliedForces.length > 0) {
+        summaryLines.push(`\\subsection*{${escapeLatex(modeConfig.loadHeading)}}\n`);
+        if (appliedLoads.length > 0) {
             summaryLines.push(`\\begin{tabular}{|c|r|}\n`);
             summaryLines.push(`\\hline\n`);
-            summaryLines.push(`\\textbf{Node} & \\textbf{Force (F)} \\\\\n`);
+            summaryLines.push(`\\textbf{Node} & \\textbf{${escapeLatex(modeConfig.loadColumnLabel)}} \\\\\n`);
             summaryLines.push(`\\hline\n`);
-            appliedForces.forEach(item => {
-                summaryLines.push(`${item.node} & ${formatEngineeringNotationForLatex(item.force, decimalPlaces)} \\\\\n`);
+            appliedLoads.forEach(item => {
+                summaryLines.push(`${item.node} & ${formatEngineeringNotationForLatex(item.value, decimalPlaces)} \\\\\n`);
             });
             summaryLines.push(`\\hline\n`);
             summaryLines.push(`\\end{tabular}\n\n`);
         } else {
-            summaryLines.push(`No external forces applied.\n\n`);
+            summaryLines.push(`${modeConfig.noLoadText}\n\n`);
         }
 
         summaryLines.push(`\\subsection*{System Diagram}\n`);
@@ -1639,7 +1982,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 summaryLines.push(`\\begin{figure}[h]\n\\centering\n\\includegraphics[width=0.85\\textwidth]{${formatGraphicPath(fig.src)}}\n\\caption{${escapeLatex(fig.caption)}}\n\\end{figure}\n\n`);
             });
             const figurePaths = requestedExampleFigures.map(fig => `\\texttt{${escapeLatex(fig.src)}}`).join(', ');
-            summaryLines.push(`\\textit{Reminder: copy ${figurePaths} alongside this \\LaTeX{} file before compiling.}\\par\n\n`);
+            summaryLines.push(`\\textit{${escapeLatex(modeConfig.presetImageReminderIntro)} ${figurePaths}.}\\par\n\n`);
         } else {
             summaryLines.push(`No Example 2.2 or Example 2.3 illustration was selected during this session.\n\n`);
         }
@@ -1648,12 +1991,12 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryLines.push(`\\begin{tabular}{|l|c|}\n`);
         summaryLines.push(`\\hline\nTask & State \\\\\n\\hline\n`);
         const computationRows = [
-            { label: 'Global stiffness matrix ($K$)', ready: Boolean(matrixForExport.K), hint: '\\texttt{Generate Stiffness Matrix}' },
+            { label: `${escapeLatex(modeConfig.matrixHeading)}`, ready: Boolean(matrixForExport.K), hint: `\\texttt{${escapeLatex(modeConfig.matrixButtonText)}}` },
             { label: 'Inverse reduced matrix ($K_r^{-1}$)', ready: Boolean(matrixForExport.invK), hint: '\\texttt{Invert Matrix}' },
-            { label: 'Nodal displacements ($d$)', ready: fullDisplacementVector.length > 0, hint: '\\texttt{Calculate Displacements}' },
-            { label: 'Reaction forces ($R$)', ready: reactionForcesResult.length > 0, hint: '\\texttt{Calculate Displacements}' },
-            { label: 'Element forces ($f$)', ready: elementForcesResult.length > 0, hint: '\\texttt{Calculate Element Forces}' },
-            { label: 'Element stresses ($\\sigma$)', ready: elementStressesResult.length > 0, hint: '\\texttt{Calculate Stresses}' }
+            { label: `${escapeLatex(modeConfig.primaryResultHeading)}`, ready: fullDisplacementVector.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.primarySolveButton)}}` },
+            { label: `${escapeLatex(modeConfig.reactionHeading)}`, ready: reactionForcesResult.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.primarySolveButton)}}` },
+            { label: `${escapeLatex(modeConfig.elementForceHeading)}`, ready: elementForcesResult.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.elementForceButton)}}` },
+            { label: `${escapeLatex(modeConfig.elementFluxHeading)}`, ready: elementStressesResult.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.elementFluxButton)}}` }
         ];
         computationRows.forEach(row => {
             const statusText = row.ready ? '\\textbf{Ready}' : `Pending (${row.hint})`;
@@ -1662,33 +2005,33 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryLines.push(`\\hline\n\\end{tabular}\n\n`);
 
         const highlightRows = [];
-        if (appliedForces.length > 0) {
-            const peakLoad = appliedForces.reduce((best, current) => !best || Math.abs(current.force) > Math.abs(best.force) ? current : best, null);
+        if (appliedLoads.length > 0) {
+            const peakLoad = appliedLoads.reduce((best, current) => (!best || Math.abs(current.value) > Math.abs(best.value) ? current : best), null);
             if (peakLoad) {
                 highlightRows.push({
-                    metric: 'Largest applied load',
+                    metric: `Largest applied ${modeConfig.loadValueLabel.toLowerCase()}`,
                     location: `Node ${peakLoad.node}`,
-                    value: formatEngineeringNotationForLatex(peakLoad.force, decimalPlaces)
+                    value: formatEngineeringNotationForLatex(peakLoad.value, decimalPlaces)
                 });
             }
         }
 
-        const displacementEntries = fullDisplacementVector
+        const fieldEntries = fullDisplacementVector
             .map((value, index) => ({ node: index + 1, value }))
             .filter(entry => Number.isFinite(entry.value) && entry.value !== 0);
-        if (displacementEntries.length > 0) {
-            const maxDisplacement = displacementEntries.reduce((best, curr) => Math.abs(curr.value) > Math.abs(best.value) ? curr : best, displacementEntries[0]);
+        if (fieldEntries.length > 0) {
+            const maxEntry = fieldEntries.reduce((best, curr) => Math.abs(curr.value) > Math.abs(best.value) ? curr : best, fieldEntries[0]);
             highlightRows.push({
-                metric: 'Maximum |displacement|',
-                location: `Node ${maxDisplacement.node}`,
-                value: formatEngineeringNotationForLatex(maxDisplacement.value, decimalPlaces)
+                metric: modeConfig.highlightPrimaryMetric,
+                location: `Node ${maxEntry.node}`,
+                value: formatEngineeringNotationForLatex(maxEntry.value, decimalPlaces)
             });
         }
 
         if (reactionForcesResult.length > 0) {
             const maxReaction = reactionForcesResult.reduce((best, curr) => Math.abs(curr.force) > Math.abs(best.force) ? curr : best, reactionForcesResult[0]);
             highlightRows.push({
-                metric: 'Maximum |reaction|',
+                metric: modeConfig.highlightReactionMetric,
                 location: `Node ${maxReaction.node}`,
                 value: formatEngineeringNotationForLatex(maxReaction.force, decimalPlaces)
             });
@@ -1697,7 +2040,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elementForcesResult.length > 0) {
             const maxElementForce = elementForcesResult.reduce((best, curr) => Math.abs(curr.force) > Math.abs(best.force) ? curr : best, elementForcesResult[0]);
             highlightRows.push({
-                metric: 'Maximum |element force|',
+                metric: modeConfig.highlightElementForceMetric,
                 location: escapeLatex(maxElementForce.label || ''),
                 value: formatEngineeringNotationForLatex(maxElementForce.force, decimalPlaces)
             });
@@ -1706,7 +2049,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elementStressesResult.length > 0) {
             const maxStress = elementStressesResult.reduce((best, curr) => Math.abs(curr.stress) > Math.abs(best.stress) ? curr : best, elementStressesResult[0]);
             highlightRows.push({
-                metric: 'Maximum |element stress|',
+                metric: modeConfig.highlightElementFluxMetric,
                 location: escapeLatex(maxStress.label || ''),
                 value: formatEngineeringNotationForLatex(maxStress.stress, decimalPlaces)
             });
@@ -1726,7 +2069,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         summaryLines.push(`\\section*{Analysis Results}\n`);
 
-        summaryLines.push(`\\subsection*{Global Stiffness Matrix (K)}\n`);
+        summaryLines.push(`\\subsection*{${escapeLatex(modeConfig.matrixHeading)}}\n`);
         if (matrixForExport.K) {
             summaryLines.push(generateLatexString(matrixForExport.K, matrixForExport.kHeaders, matrixForExport.kNumericMultiplier));
         } else {
@@ -1740,15 +2083,15 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryLines.push(`Not calculated.\n\n`);
         }
 
-        summaryLines.push(`\\subsection*{Nodal Displacements (d)}\n`);
+        summaryLines.push(`\\subsection*{${escapeLatex(modeConfig.primaryResultHeading)}}\n`);
         if (fullDisplacementVector.length > 0) {
             summaryLines.push(`\\begin{tabular}{|c|r|}\n`);
             summaryLines.push(`\\hline\n`);
-            summaryLines.push(`\\textbf{Node} & \\textbf{Displacement} \\\\\n`);
+            summaryLines.push(`\\textbf{Node} & \\textbf{${escapeLatex(modeConfig.primaryResultColumn)}} \\\\\n`);
             summaryLines.push(`\\hline\n`);
-            fullDisplacementVector.forEach((d, i) => {
-                if (d !== 0 && Number.isFinite(d)) {
-                    summaryLines.push(`${i + 1} & ${formatEngineeringNotationForLatex(d, decimalPlaces)} \\\\\n`);
+            fullDisplacementVector.forEach((value, index) => {
+                if (value !== 0 && Number.isFinite(value)) {
+                    summaryLines.push(`${index + 1} & ${formatEngineeringNotationForLatex(value, decimalPlaces)} \\\\\n`);
                 }
             });
             summaryLines.push(`\\hline\n`);
@@ -1757,11 +2100,11 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryLines.push(`Not calculated.\n\n`);
         }
 
-        summaryLines.push(`\\subsection*{Reaction Forces (R)}\n`);
+        summaryLines.push(`\\subsection*{${escapeLatex(modeConfig.reactionHeading)}}\n`);
         if (reactionForcesResult.length > 0) {
             summaryLines.push(`\\begin{tabular}{|c|r|}\n`);
             summaryLines.push(`\\hline\n`);
-            summaryLines.push(`\\textbf{Node} & \\textbf{Reaction Force} \\\\\n`);
+            summaryLines.push(`\\textbf{Node} & \\textbf{${escapeLatex(modeConfig.reactionColumn)}} \\\\\n`);
             summaryLines.push(`\\hline\n`);
             reactionForcesResult.forEach(r => {
                 summaryLines.push(`${r.node} & ${formatEngineeringNotationForLatex(r.force, decimalPlaces)} \\\\\n`);
@@ -1772,11 +2115,11 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryLines.push(`Not calculated.\n\n`);
         }
 
-        summaryLines.push(`\\subsection*{Elemental Forces (f)}\n`);
+        summaryLines.push(`\\subsection*{${escapeLatex(modeConfig.elementForceHeading)}}\n`);
         if (elementForcesResult.length > 0) {
             summaryLines.push(`\\begin{tabular}{|l|r|}\n`);
             summaryLines.push(`\\hline\n`);
-            summaryLines.push(`\\textbf{Element} & \\textbf{Force} \\\\\n`);
+            summaryLines.push(`\\textbf{Element} & \\textbf{${escapeLatex(modeConfig.elementForceColumn)}} \\\\\n`);
             summaryLines.push(`\\hline\n`);
             elementForcesResult.forEach(f => {
                 summaryLines.push(`${escapeLatex(f.label)} & ${formatEngineeringNotationForLatex(f.force, decimalPlaces)} \\\\\n`);
@@ -1787,11 +2130,11 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryLines.push(`Not calculated.\n\n`);
         }
 
-        summaryLines.push(`\\subsection*{Elemental Stresses ($\\sigma$)}\n`);
+        summaryLines.push(`\\subsection*{${escapeLatex(modeConfig.elementFluxHeading)}}\n`);
         if (elementStressesResult.length > 0) {
             summaryLines.push(`\\begin{tabular}{|l|r|}\n`);
             summaryLines.push(`\\hline\n`);
-            summaryLines.push(`\\textbf{Element} & \\textbf{Stress} \\\\\n`);
+            summaryLines.push(`\\textbf{Element} & \\textbf{${escapeLatex(modeConfig.elementFluxColumn)}} \\\\\n`);
             summaryLines.push(`\\hline\n`);
             elementStressesResult.forEach(s => {
                 summaryLines.push(`${escapeLatex(s.label)} & ${formatEngineeringNotationForLatex(s.stress, decimalPlaces)} \\\\\n`);

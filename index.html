@@ -21,6 +21,13 @@
             </div>
             <div class="input-grid">
                 <div class="input-group">
+                    <label for="analysis-mode">Analysis Type</label>
+                    <select id="analysis-mode" title="Switch between structural (spring/axial) or thermal conduction analysis.">
+                        <option value="structural" selected>Structural (springs / axial bars)</option>
+                        <option value="thermal">Thermal conduction (1D steady state)</option>
+                    </select>
+                </div>
+                <div class="input-group">
                     <label for="global-multiplier">Global Multiplier</label>
                     <input type="number" id="global-multiplier" value="1" step="any" title="Enter a global multiplier to scale all stiffness values.">
                 </div>
@@ -62,8 +69,8 @@
 
         <section id="forces-section" class="panel">
             <div class="panel-header">
-                <h2>Applied Forces (F)</h2>
-                <p>Specify the force acting at each node.</p>
+                <h2 id="forces-title">Applied Forces (F)</h2>
+                <p id="forces-description">Specify the force acting at each node.</p>
             </div>
             <div id="forces-container" class="flash-target grid-flow"></div>
         </section>
@@ -88,6 +95,7 @@
                         <button id="activity-2-3-btn" class="btn btn--muted btn--compact" title="Load the 'Activity 2.3' problem data.">Activity 2.3</button>
                         <button id="load-example-1-btn" class="btn btn--muted btn--compact" title="Load the 'Example 2.2' problem data.">Example 2.2</button>
                         <button id="load-example-3-btn" class="btn btn--muted btn--compact" title="Load the 'Example 2.3' problem data.">Example 2.3</button>
+                        <button id="load-example-4-btn" class="btn btn--muted btn--compact" title="Load the 'Example 2.4' thermal conduction wall problem.">Example 2.4</button>
                         <button id="load-example-cook-btn" class="btn btn--muted btn--compact" title="Load the Cook et al. cantilever-bar problem setup.">Cook Cantilever</button>
                         <button id="load-example-moaveni-btn" class="btn btn--muted btn--compact" title="Load the Moaveni parallel-branch example.">Moaveni Parallel</button>
                     </div>
@@ -124,22 +132,22 @@
             <h2 class="output-title">Result Summaries</h2>
             <div class="results-grid">
                 <div class="output-container">
-                    <h3 class="output-title">Displacements (d)</h3>
+                    <h3 class="output-title" id="displacements-title">Displacements (d)</h3>
                     <div id="displacements-container" class="results-box flash-target"></div>
                 </div>
 
                 <div class="output-container">
-                    <h3 class="output-title">Reaction Forces (R)</h3>
+                    <h3 class="output-title" id="reaction-title">Reaction Forces (R)</h3>
                     <div id="reaction-forces-container" class="results-box flash-target"></div>
                 </div>
 
                 <div class="output-container">
-                    <h3 class="output-title">Elemental Stresses (σ)</h3>
+                    <h3 class="output-title" id="stresses-title">Elemental Stresses (σ)</h3>
                     <div id="stresses-container" class="results-box flash-target"></div>
                 </div>
 
                 <div class="output-container">
-                    <h3 class="output-title">Element Forces (f)</h3>
+                    <h3 class="output-title" id="element-forces-title">Element Forces (f)</h3>
                     <div id="element-forces-container" class="results-box flash-target"></div>
                 </div>
             </div>
