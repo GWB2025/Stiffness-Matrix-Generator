@@ -32,9 +32,9 @@ A web-based tool for generating and analysing 1D stiffness matrices for systems 
 
 The Cook et al. preset replicates the textbook cantilever made of three axial segments with varying lengths and areas:
 
-*   **Bar 1**: \(L_1 = 1.5\,\mathrm{m}\), \(A_1 = 2.0 \times 10^{-4}\,\mathrm{m}^2\)
-*   **Bar 2**: \(L_2 = 1.0\,\mathrm{m}\), \(A_2 = 1.5 \times 10^{-4}\,\mathrm{m}^2\)
-*   **Bar 3**: \(L_3 = 0.5\,\mathrm{m}\), \(A_3 = 1.0 \times 10^{-4}\,\mathrm{m}^2\)
+*   **Bar 1**: L1 = 1.5 m, A1 = 2.0 × 10⁻⁴ m²
+*   **Bar 2**: L2 = 1.0 m, A2 = 1.5 × 10⁻⁴ m²
+*   **Bar 3**: L3 = 0.5 m, A3 = 1.0 × 10⁻⁴ m²
 
 Nodes 1–3 are arranged sequentially with the left end fixed, and a 50 kN tip load acts downward at Node 4. The preset uses the same data quoted in Cook et al., *Concepts and Applications of Finite Element Analysis* (4th ed., Chapter 2). Launching “Cook Cantilever” from the presets menu configures the mesh, boundary condition, force vector, and displays the accompanying equivalent-spring diagram for quick verification.
 
