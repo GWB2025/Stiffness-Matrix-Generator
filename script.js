@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // UI Elements
     const numNodesInput = document.getElementById('num-nodes');
     const globalMultiplierInput = document.getElementById('global-multiplier');
+    const youngsModulusInput = document.getElementById('youngs-modulus');
     const decimalPlacesInput = document.getElementById('decimal-places');
     const fixedNodesContainer = document.getElementById('fixed-nodes-container');
     const elementsContainer = document.getElementById('elements-container');
@@ -12,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const calculateStressesBtn = document.getElementById('calculate-stresses-btn');
     const addElementBtn = document.getElementById('add-element-btn');
     const loadExample1Btn = document.getElementById('load-example-1-btn');
+    const loadExample11Btn = document.getElementById('load-example-1-1-btn');
     const loadExample3Btn = document.getElementById('load-example-3-btn');
     const loadExample4Btn = document.getElementById('load-example-4-btn');
     const activity23Btn = document.getElementById('activity-2-3-btn');
@@ -292,6 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
             key: 'example24',
             src: 'images/example_2_4_wall.svg',
             caption: 'Example 2.4 exterior wall diagram'
+        },
+        example11: {
+            key: 'example11',
+            src: 'images/example_1_1.svg',
+            caption: 'Moaveni Example 1.1 tapered bar'
         }
     };
     const activePresetIllustrations = new Set();
@@ -1099,7 +1106,8 @@ document.addEventListener('DOMContentLoaded', () => {
             fixedNodes = [],
             forces = [],
             autoGenerateMatrix = true,
-            analysisMode: presetMode
+            analysisMode: presetMode,
+            youngsModulus
         } = config;
 
         if (presetMode) {
@@ -1109,6 +1117,9 @@ document.addEventListener('DOMContentLoaded', () => {
         numNodesInput.value = numNodes;
         globalMultiplierInput.value = globalMultiplier;
         decimalPlacesInput.value = decimalPlaces;
+        if (youngsModulusInput && typeof youngsModulus === 'number' && !Number.isNaN(youngsModulus)) {
+            youngsModulusInput.value = youngsModulus;
+        }
 
         elementsContainer.innerHTML = '';
         elementCount = 0;
@@ -1202,7 +1213,6 @@ document.addEventListener('DOMContentLoaded', () => {
         flashTarget(elementRow);
 
         // --- Auto-calculation logic for the new row ---
-        const youngsModulusInput = document.getElementById('youngs-modulus');
         const areaInput = elementRow.querySelector('.area-input');
         const lengthInput = elementRow.querySelector('.length-input');
         const stiffnessInput = elementRow.querySelector('.stiffness-input');
@@ -1252,7 +1262,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Add event listener for the global Young's Modulus input
-    const youngsModulusInput = document.getElementById('youngs-modulus');
     if (youngsModulusInput) {
         youngsModulusInput.addEventListener('input', () => {
             document.querySelectorAll('.element-row').forEach(row => {
@@ -1415,6 +1424,21 @@ document.addEventListener('DOMContentLoaded', () => {
             ],
             fixedNodes: [true, false, false, false],
             forces: [0, 0, 0, -40000]
+        },
+        moaveniExample11: {
+            analysisMode: 'structural',
+            numNodes: 5,
+            globalMultiplier: 1,
+            decimalPlaces: 6,
+            youngsModulus: 10.4e6,
+            elements: [
+                { node1: 1, node2: 2, area: 0.234375, length: 2.5, stiffness: 975000, label: 'k1' },
+                { node1: 2, node2: 3, area: 0.203125, length: 2.5, stiffness: 845000, label: 'k2' },
+                { node1: 3, node2: 4, area: 0.171875, length: 2.5, stiffness: 715000, label: 'k3' },
+                { node1: 4, node2: 5, area: 0.140625, length: 2.5, stiffness: 585000, label: 'k4' }
+            ],
+            fixedNodes: [true, false, false, false, false],
+            forces: [0, 0, 0, 0, 1000]
         },
         thermalExteriorWall: {
             analysisMode: 'thermal',
@@ -1602,6 +1626,20 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.style.display = 'flex'; // Show the modal
         registerPresetIllustration('example22');
     });
+
+    if (loadExample11Btn) {
+        loadExample11Btn.addEventListener('click', () => {
+            loadCustomExample(exampleScenarios.moaveniExample11);
+            modalImg.src = 'images/example_1_1.svg';
+            modalImg.alt = 'Moaveni Example 1.1 tapered bar diagram';
+            const modalContent = document.querySelector('.modal-content');
+            if (modalContent.resetDragPosition) {
+                modalContent.resetDragPosition();
+            }
+            modal.style.display = 'flex';
+            registerPresetIllustration('example11');
+        });
+    }
 
     if (loadExampleCookBtn) {
         loadExampleCookBtn.addEventListener('click', () => {
@@ -1916,6 +1954,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (activePresetIllustrations.has('example23')) {
             requestedExampleFigures.push(presetIllustrationMetadata.example23);
+        }
+        if (activePresetIllustrations.has('example11')) {
+            requestedExampleFigures.push(presetIllustrationMetadata.example11);
         }
 
         const elementRows = elementsContainer.querySelectorAll('.element-row');

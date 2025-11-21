@@ -129,3 +129,41 @@ test('computeDisplacements respects prescribed boundary values', () => {
     approxEqual(reactionForces[0], -500);
     approxEqual(reactionForces[2], 500);
 });
+
+test('Moaveni Example 1.1 preset reproduces textbook displacements & stresses', () => {
+    const numNodes = 5;
+    const elements = [
+        { node1: 1, node2: 2, stiffness: 975000, area: 0.234375 },
+        { node1: 2, node2: 3, stiffness: 845000, area: 0.203125 },
+        { node1: 3, node2: 4, stiffness: 715000, area: 0.171875 },
+        { node1: 4, node2: 5, stiffness: 585000, area: 0.140625 }
+    ];
+    const forces = [0, 0, 0, 0, 1000];
+    const fixedNodes = [true, false, false, false, false];
+    const freeNodes = fixedNodes.map((fixed, index) => (fixed ? -1 : index)).filter(index => index !== -1);
+    const globalMatrix = Calculations.assembleGlobalStiffnessMatrix(numNodes, elements);
+    const reducedMatrix = Calculations.buildReducedMatrix(globalMatrix, freeNodes, 1);
+    const invertedMatrix = Calculations.invertMatrix(reducedMatrix);
+
+    const { fullDisplacementVector, reactionForces } = Calculations.computeDisplacements({
+        invertedReducedMatrix: invertedMatrix,
+        freeNodesIndices: freeNodes,
+        fixedNodesIndices: [0],
+        forces,
+        globalMatrix,
+        globalMultiplier: 1,
+        knownDisplacements: [0, 0, 0, 0, 0]
+    });
+
+    const expectedDisplacements = [0, 0.001026, 0.002210, 0.003608, 0.005317];
+    expectedDisplacements.forEach((value, index) => {
+        approxEqual(fullDisplacementVector[index], value, 5e-6);
+    });
+    approxEqual(reactionForces[0], -1000, 1e-6);
+
+    const elementStresses = Calculations.calculateElementStresses(elements, fullDisplacementVector, 1);
+    const expectedStresses = [4268, 4925, 5816, 7109];
+    expectedStresses.forEach((stress, idx) => {
+        approxEqual(elementStresses[idx].stress, stress, 5);
+    });
+});

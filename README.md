@@ -42,6 +42,16 @@ Nodes 1–3 are arranged sequentially with the left end fixed, and a 50 kN tip
 
 The “Moaveni Parallel” preset reproduces the axial bar assembly from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (6th ed., Pearson, 2015), Chapter 2 Example 2.3. In that example, the bar contains three sequential segments with a parallel branch between nodes 2 and 3, all evaluated with \((E = 210\,\text{GPa})\) and a 40 kN end load. Loading the preset recreates the geometry, areas, lengths, and stiffnesses shown in Moaveni’s worked problem so you can verify the book’s nodal displacements, internal forces, and reaction forces directly inside the app.
 
+### Moaveni Example 1.1 Tapered Bar
+
+The “Example 1.1” preset mirrors the direct-formulation walk-through in Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008), Chapter 1 Example 1.1. Selecting it configures the tapered aluminum strip exactly as tabulated in the text:
+
+*   \(E = 10.4 \times 10^{6}\,\text{lb/in}^2\), \(w_1 = 2\,\text{in}\), \(w_2 = 1\,\text{in}\), \(t = 0.125\,\text{in}\), and \(L = 10\,\text{in}\).
+*   Four 2.5 in elements are created with average areas \([0.234375, 0.203125, 0.171875, 0.140625]\,\text{in}^2\) and equivalent stiffnesses \([9.75, 8.45, 7.15, 5.85] \times 10^{5}\,\text{lb/in}\).
+*   Node 1 is fixed, Node 5 carries the \(P = 1000\,\text{lb}\) tip load, and all intermediate nodes are free.
+
+These inputs let you reproduce the published nodal displacements, reaction force, and element stresses for the tapered bar without re-entering the data by hand. The preset is a concise restatement of the Example 1.1 problem published in Saeed Moaveni’s *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008; Library of Congress TA347.F5 M62 2007, ISBN 0‑13‑189080‑8).
+
 ### Example 2.4 Thermal Wall
 
 The “Example 2.4” preset switches the app into steady-state thermal analysis, loads the six-layer exterior wall described in *Heat_transfer_example.pdf* (“Direct formulation: thermal applications”), and pre-fills the outside/inside film temperatures (\(-6.7^\circ\text{C}\) and \(21^\circ\text{C}\)). Each layer’s U-factor is automatically converted into a conductance ( \(G = U \times A\) with \(A = 14\,\text{m}^2\) ), so you can immediately reproduce the published nodal temperature distribution and total heat loss through the wall.
