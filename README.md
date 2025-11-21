@@ -40,7 +40,7 @@ Nodes 1–3 are arranged sequentially with the left end fixed, and a 50 kN tip
 
 ### Moaveni Parallel Branch Example
 
-The “Moaveni Parallel” preset reproduces the axial bar assembly from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (6th ed., Pearson, 2015), Chapter 2 Example 2.3. In that example, the bar contains three sequential segments with a parallel branch between nodes 2 and 3, all evaluated with \((E = 210\,\text{GPa})\) and a 40 kN end load. Loading the preset recreates the geometry, areas, lengths, and stiffnesses shown in Moaveni’s worked problem so you can verify the book’s nodal displacements, internal forces, and reaction forces directly inside the app.
+The “Moaveni Parallel” preset reproduces the axial bar assembly from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (6th ed., Pearson, 2015), Chapter 2 Example 2.3. In that example, the bar contains three sequential segments with a parallel branch between nodes 2 and 3, all evaluated with E = 210 GPa and a 40 kN end load. Loading the preset recreates the geometry, areas, lengths, and stiffnesses shown in Moaveni’s worked problem so you can verify the book’s nodal displacements, internal forces, and reaction forces directly inside the app.
 
 ### Moaveni Example 1.1 Tapered Bar
 
@@ -54,7 +54,7 @@ These inputs let you reproduce the published nodal displacements, reaction force
 
 ### Example 2.4 Thermal Wall
 
-The “Example 2.4” preset switches the app into steady-state thermal analysis, loads the six-layer exterior wall described in *Heat_transfer_example.pdf* (“Direct formulation: thermal applications”), and pre-fills the outside/inside film temperatures (\(-6.7^\circ\text{C}\) and \(21^\circ\text{C}\)). Each layer’s U-factor is automatically converted into a conductance ( \(G = U \times A\) with \(A = 14\,\text{m}^2\) ), so you can immediately reproduce the published nodal temperature distribution and total heat loss through the wall.
+The “Example 2.4” preset switches the app into steady-state thermal analysis, loads the six-layer exterior wall described in *Heat_transfer_example.pdf* (“Direct formulation: thermal applications”), and pre-fills the outside/inside film temperatures (-6.7 °C and 21 °C). Each layer’s U-factor is automatically converted into a conductance (G = U × A with A = 14 m²), so you can immediately reproduce the published nodal temperature distribution and total heat loss through the wall.
 
 ## How to Use
 
