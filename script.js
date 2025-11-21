@@ -1440,12 +1440,12 @@ document.addEventListener('DOMContentLoaded', () => {
             globalMultiplier: 1,
             decimalPlaces: 4,
             elements: [
-                { node1: 1, node2: 2, area: 150, length: 1, stiffness: 882, label: 'Outside film' },
-                { node1: 2, node2: 3, area: 150, length: 1, stiffness: 184.5, label: 'Wood siding' },
-                { node1: 3, node2: 4, area: 150, length: 1, stiffness: 114, label: 'Sheathing' },
-                { node1: 4, node2: 5, area: 150, length: 1, stiffness: 13.65, label: 'Insulation batt' },
-                { node1: 5, node2: 6, area: 150, length: 1, stiffness: 333, label: 'Gypsum board' },
-                { node1: 6, node2: 7, area: 150, length: 1, stiffness: 220.5, label: 'Inside film' }
+                { node1: 1, node2: 2, area: 150, length: 1, stiffness: 5.88, label: 'Outside film' },
+                { node1: 2, node2: 3, area: 150, length: 1, stiffness: 1.23, label: 'Wood siding' },
+                { node1: 3, node2: 4, area: 150, length: 1, stiffness: 0.76, label: 'Sheathing' },
+                { node1: 4, node2: 5, area: 150, length: 1, stiffness: 0.091, label: 'Insulation batt' },
+                { node1: 5, node2: 6, area: 150, length: 1, stiffness: 2.22, label: 'Gypsum board' },
+                { node1: 6, node2: 7, area: 150, length: 1, stiffness: 1.47, label: 'Inside film' }
             ],
             fixedNodes: [
                 { fixed: true, value: 20 },

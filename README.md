@@ -54,14 +54,14 @@ These inputs let you reproduce the published nodal displacements, reaction force
 
 ### Example 2.4 Thermal Wall
 
-The “Example 2.4” preset now mirrors Example 1.2 from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008): a 2×4 exterior wall with a 150 ft² exposed area, outside air at 20 °F, and an indoor temperature of 70 °F. The six layers listed in Moaveni’s table are modeled as sequential thermal elements, each with conductance G = U × A derived from the provided U-factors:
+The “Example 2.4” preset now mirrors Example 1.2 from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008): a 2×4 exterior wall with a 150 ft² exposed area, outside air at 20 °F, and an indoor temperature of 70 °F. The six layers listed in Moaveni’s table are modeled as sequential thermal elements, each using the book’s U-factor (Btu/hr·ft²·°F) directly as the element conductance so the nodal temperatures (20.59, 23.41, 27.97, 66.08, 67.64 °F) and 520 Btu/hr heat loss match the worked example:
 
-*   Outside film (winter, 15 mph), U = 5.88 Btu/hr·ft²·°F → G = 882 Btu/hr·°F
-*   Wood siding (1/2 in. lapped), U = 1.23 → G = 184.5
-*   Sheathing (1/2 in. regular), U = 0.76 → G = 114
-*   Insulation batt (3–3½ in.), U = 0.091 → G = 13.65
-*   Gypsum wallboard (1/2 in.), U = 2.22 → G = 333
-*   Inside film (winter), U = 1.47 → G = 220.5
+*   Outside film (winter, 15 mph), U = 5.88
+*   Wood siding (1/2 in. lapped), U = 1.23
+*   Sheathing (1/2 in. regular), U = 0.76
+*   Insulation batt (3–3½ in.), U = 0.091
+*   Gypsum wallboard (1/2 in.), U = 2.22
+*   Inside film (winter), U = 1.47
 
 Loading the preset switches the app to thermal mode, fixes node 1 at 20 °F and node 7 at 70 °F, and leaves the intermediate nodes free so you can reproduce the book’s nodal temperature distribution and total heat loss with one click.
 

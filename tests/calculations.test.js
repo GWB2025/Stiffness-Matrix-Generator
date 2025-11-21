@@ -167,3 +167,39 @@ test('Moaveni Example 1.1 preset reproduces textbook displacements & stresses', 
         approxEqual(elementStresses[idx].stress, stress, 5);
     });
 });
+
+test('Moaveni Example 1.2 thermal wall matches nodal temperatures and heat flow', () => {
+    const elements = [
+        { node1: 1, node2: 2, stiffness: 5.88, area: 150 },
+        { node1: 2, node2: 3, stiffness: 1.23, area: 150 },
+        { node1: 3, node2: 4, stiffness: 0.76, area: 150 },
+        { node1: 4, node2: 5, stiffness: 0.091, area: 150 },
+        { node1: 5, node2: 6, stiffness: 2.22, area: 150 },
+        { node1: 6, node2: 7, stiffness: 1.47, area: 150 }
+    ];
+    const numNodes = 7;
+    const K = Calculations.assembleGlobalStiffnessMatrix(numNodes, elements);
+    const fixedNodes = [true, false, false, false, false, false, true];
+    const freeNodes = fixedNodes.map((fixed, index) => (fixed ? -1 : index)).filter(index => index !== -1);
+    const reducedMatrix = Calculations.buildReducedMatrix(K, freeNodes, 1);
+    const invertedMatrix = Calculations.invertMatrix(reducedMatrix);
+    const { fullDisplacementVector } = Calculations.computeDisplacements({
+        invertedReducedMatrix: invertedMatrix,
+        freeNodesIndices: freeNodes,
+        fixedNodesIndices: [0, 6],
+        knownDisplacements: [20, 0, 0, 0, 0, 0, 70],
+        forces: Array(numNodes).fill(0),
+        globalMatrix: K,
+        globalMultiplier: 1
+    });
+
+    const expectedTemps = [20, 20.59, 23.41, 27.97, 66.08, 67.64, 70];
+    expectedTemps.forEach((temp, idx) => {
+        approxEqual(fullDisplacementVector[idx], temp, 0.02);
+    });
+
+    const heatFlows = Calculations.calculateElementForces(elements, fullDisplacementVector, 1);
+    heatFlows.forEach(flow => {
+        approxEqual(Math.abs(flow.force * 150), 520, 5); // Multiply by area to reflect Example 1.2 heat loss
+    });
+});
