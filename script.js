@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const calculateDisplacementsBtn = document.getElementById('calculate-displacements-btn');
     const calculateStressesBtn = document.getElementById('calculate-stresses-btn');
     const addElementBtn = document.getElementById('add-element-btn');
-    const loadExample1Btn = document.getElementById('load-example-1-btn');
     const loadExample11Btn = document.getElementById('load-example-1-1-btn');
     const loadExample3Btn = document.getElementById('load-example-3-btn');
     const loadExample4Btn = document.getElementById('load-example-4-btn');
@@ -280,11 +279,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let analysisMode = analysisModeSelect ? getValidMode(analysisModeSelect.value) : 'structural';
     const getModeConfig = () => MODE_CONFIG[analysisMode] || MODE_CONFIG.structural;
     const presetIllustrationMetadata = {
-        example22: {
-            key: 'example22',
-            src: 'images/2_2_example.png',
-            caption: 'Example 2.2 reference diagram'
-        },
         example23: {
             key: 'example23',
             src: 'images/2_3_example.png',
@@ -1598,35 +1592,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateActionButtonStates();
     });
 
-    loadExample1Btn.addEventListener('click', () => {
-        numNodesInput.value = 5;
-        globalMultiplierInput.value = 1e8; // Set multiplier to 10^8 as per reaction.png example
-        decimalPlacesInput.value = 4;
-
-        elementsContainer.innerHTML = ''; // Clear existing elements
-        addElementRow(1, 2, 0.3333, 1e-4, 'Element 1');
-        addElementRow(2, 3, 1, 1e-4, 'Element 2');
-        addElementRow(3, 4, 1, 1e-4, 'Element 3');
-        addElementRow(4, 5, 0.3333, 1e-4, 'Element 4');
-
-        generateBoundaryConditionsUI(5, [true, false, false, false, true]); // Fixed nodes 1 and 5
-        generateForcesUI(5, [0, 0, 10000, 0, 0]); // Force at node 3
-        markMatrixDirty();
-        generateAndDisplayMatrix(); // Generate and display the matrix from the elements
-        saveState();
-
-        // Show modal with example 2.2 image
-        modalImg.src = 'images/2_2_example.png';
-        modalImg.alt = 'Example 2.2 Diagram';
-        // Reset modal position to center before showing
-        const modalContent = document.querySelector('.modal-content');
-        if (modalContent.resetDragPosition) {
-            modalContent.resetDragPosition();
-        }
-        modal.style.display = 'flex'; // Show the modal
-        registerPresetIllustration('example22');
-    });
-
     if (loadExample11Btn) {
         loadExample11Btn.addEventListener('click', () => {
             loadCustomExample(exampleScenarios.moaveniExample11);
@@ -1949,9 +1914,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const diagramError = diagramResult.error;
         const formatGraphicPath = (path) => `\\detokenize{${path}}`;
         const requestedExampleFigures = [];
-        if (activePresetIllustrations.has('example22')) {
-            requestedExampleFigures.push(presetIllustrationMetadata.example22);
-        }
         if (activePresetIllustrations.has('example23')) {
             requestedExampleFigures.push(presetIllustrationMetadata.example23);
         }
@@ -2138,7 +2100,7 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryLines.push(`${diagramError ? escapeLatex(diagramError) : 'Diagram unavailable. Ensure nodes and elements are defined before exporting.'}\n\n`);
         }
 
-        summaryLines.push(`\\subsection*{Example 2.2 / 2.3 Reference Images}\n`);
+        summaryLines.push(`\\subsection*{Preset Reference Images}\n`);
         if (requestedExampleFigures.length > 0) {
             requestedExampleFigures.forEach(fig => {
                 summaryLines.push(`\\begin{figure}[h]\n\\centering\n\\includegraphics[width=0.85\\textwidth]{${formatGraphicPath(fig.src)}}\n\\caption{${escapeLatex(fig.caption)}}\n\\end{figure}\n\n`);
@@ -2146,7 +2108,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const figurePaths = requestedExampleFigures.map(fig => `\\texttt{${escapeLatex(fig.src)}}`).join(', ');
             summaryLines.push(`\\textit{${escapeLatex(modeConfig.presetImageReminderIntro)} ${figurePaths}.}\\par\n\n`);
         } else {
-            summaryLines.push(`No Example 2.2 or Example 2.3 illustration was selected during this session.\n\n`);
+            summaryLines.push(`No preset illustration was selected during this session.\n\n`);
         }
 
         summaryLines.push(`\\subsection*{Computation Checklist}\n`);
