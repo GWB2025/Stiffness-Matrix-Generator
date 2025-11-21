@@ -46,7 +46,7 @@ The “Moaveni Parallel” preset reproduces the axial bar assembly from Saeed M
 
 The “Example 1.1” preset mirrors the direct-formulation walk-through in Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008), Chapter 1 Example 1.1. Selecting it configures the tapered aluminum strip exactly as tabulated in the text:
 
-*   \(E = 10.4 \times 10^{6}\,\text{lb/in}^2\), \(w_1 = 2\,\text{in}\), \(w_2 = 1\,\text{in}\), \(t = 0.125\,\text{in}\), and \(L = 10\,\text{in}\).
+*   E = 10.4e6 lb/in^2, w1 = 2 in, w2 = 1 in, t = 0.125 in, and L = 10 in.
 *   Four 2.5 in elements are created with average areas \([0.234375, 0.203125, 0.171875, 0.140625]\,\text{in}^2\) and equivalent stiffnesses \([9.75, 8.45, 7.15, 5.85] \times 10^{5}\,\text{lb/in}\).
 *   Node 1 is fixed, Node 5 carries the \(P = 1000\,\text{lb}\) tip load, and all intermediate nodes are free.
 
