@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const presetIllustrationMetadata = {
         example24: {
             key: 'example24',
-            src: 'images/example_2_4_wall.svg',
+            src: 'images/example_1_2.png',
             caption: 'Moaveni Example 1.2 thermal wall'
         },
         example11: {
@@ -1561,7 +1561,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loadExample11Btn) {
         loadExample11Btn.addEventListener('click', () => {
             loadCustomExample(exampleScenarios.moaveniExample11);
-            modalImg.src = 'images/example_1_1.svg';
+            modalImg.src = 'images/example_1_1.png';
             modalImg.alt = 'Moaveni Example 1.1 tapered bar diagram';
             const modalContent = document.querySelector('.modal-content');
             if (modalContent.resetDragPosition) {
@@ -1575,7 +1575,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loadExample4Btn) {
         loadExample4Btn.addEventListener('click', () => {
             loadCustomExample(exampleScenarios.thermalExteriorWall);
-            modalImg.src = 'images/example_2_4_wall.svg';
+            modalImg.src = 'images/example_1_2.png';
             modalImg.alt = 'Moaveni Example 1.2 thermal wall diagram';
             const modalContent = document.querySelector('.modal-content');
             if (modalContent.resetDragPosition) {
@@ -1624,6 +1624,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showConstructionSteps = () => {
+        const modeConfig = getModeConfig();
+        const coefficientDescriptor = modeConfig.elementCoefficientLabel || 'Stiffness';
         const numNodes = parseInt(numNodesInput.value);
         if (isNaN(numNodes) || numNodes < 2 || numNodes > 10) {
             alert('Please enter a valid number of nodes (between 2 and 10).');
