@@ -28,20 +28,6 @@ A web-based tool for generating and analysing 1D stiffness matrices for systems 
 *   **Example Problems**: Load predefined example problems to quickly get started.
 *   **Persistent State**: Your setup is automatically saved in your browser's local storage, so you can pick up where you left off.
 
-### Cook et al. Cantilever Example
-
-The Cook et al. preset replicates the textbook cantilever made of three axial segments with varying lengths and areas:
-
-*   **Bar 1**: L1 = 1.5 m, A1 = 2.0 × 10⁻⁴ m²
-*   **Bar 2**: L2 = 1.0 m, A2 = 1.5 × 10⁻⁴ m²
-*   **Bar 3**: L3 = 0.5 m, A3 = 1.0 × 10⁻⁴ m²
-
-Nodes 1–3 are arranged sequentially with the left end fixed, and a 50 kN tip load acts downward at Node 4. The preset uses the same data quoted in Cook et al., *Concepts and Applications of Finite Element Analysis* (4th ed., Chapter 2). Launching “Cook Cantilever” from the presets menu configures the mesh, boundary condition, force vector, and displays the accompanying equivalent-spring diagram for quick verification.
-
-### Moaveni Parallel Branch Example
-
-The “Moaveni Parallel” preset reproduces the axial bar assembly from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (6th ed., Pearson, 2015), Chapter 2 Example 2.3. In that example, the bar contains three sequential segments with a parallel branch between nodes 2 and 3, all evaluated with E = 210 GPa and a 40 kN end load. Loading the preset recreates the geometry, areas, lengths, and stiffnesses shown in Moaveni’s worked problem so you can verify the book’s nodal displacements, internal forces, and reaction forces directly inside the app.
-
 ### Moaveni Example 1.1 Tapered Bar
 
 The “Example 1.1” preset mirrors the direct-formulation walk-through in Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008), Chapter 1 Example 1.1. Selecting it configures the tapered aluminum strip exactly as tabulated in the text:
@@ -52,9 +38,9 @@ The “Example 1.1” preset mirrors the direct-formulation walk-through in Saee
 
 These inputs let you reproduce the published nodal displacements, reaction force, and element stresses for the tapered bar without re-entering the data by hand. The preset is a concise restatement of the Example 1.1 problem published in Saeed Moaveni’s *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008; Library of Congress TA347.F5 M62 2007, ISBN 0‑13‑189080‑8).
 
-### Example 2.4 Thermal Wall
+### Moaveni Example 1.2 Thermal Wall
 
-The “Example 2.4” preset now mirrors Example 1.2 from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008): a 2×4 exterior wall with a 150 ft² exposed area, outside air at 20 °F, and an indoor temperature of 70 °F. The six layers listed in Moaveni’s table are modeled as sequential thermal elements, each using the book’s U-factor (Btu/hr·ft²·°F) directly as the element conductance so the nodal temperatures (20.59, 23.41, 27.97, 66.08, 67.64 °F) and 520 Btu/hr heat loss match the worked example:
+The “Example 1.2” preset mirrors the thermal walk-through from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008): a 2×4 exterior wall with a 150 ft² exposed area, outside air at 20 °F, and an indoor temperature of 70 °F. The six layers listed in Moaveni’s table are modeled as sequential thermal elements, each using the book’s U-factor (Btu/hr·ft²·°F) directly as the element conductance so the nodal temperatures (20.59, 23.41, 27.97, 66.08, 67.64 °F) and 520 Btu/hr heat loss match the worked example:
 
 *   Outside film (winter, 15 mph), U = 5.88
 *   Wood siding (1/2 in. lapped), U = 1.23
