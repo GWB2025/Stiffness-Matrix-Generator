@@ -1,6 +1,7 @@
 *.pem
 *.png
+!images/example_1_1.png
+!images/example_1_2.png
 *.txt
 *.pdf
-
 
