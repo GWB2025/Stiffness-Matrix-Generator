@@ -13,11 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const calculateStressesBtn = document.getElementById('calculate-stresses-btn');
     const addElementBtn = document.getElementById('add-element-btn');
     const loadExample11Btn = document.getElementById('load-example-1-1-btn');
-    const loadExample3Btn = document.getElementById('load-example-3-btn');
     const loadExample4Btn = document.getElementById('load-example-4-btn');
-    const activity23Btn = document.getElementById('activity-2-3-btn');
-    const loadExampleCookBtn = document.getElementById('load-example-cook-btn');
-    const loadExampleMoaveniBtn = document.getElementById('load-example-moaveni-btn');
     const clearAppBtn = document.getElementById('clear-app-btn');
     const analysisModeSelect = document.getElementById('analysis-mode');
     const matrixContainer = document.getElementById('matrix-container');
@@ -279,15 +275,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let analysisMode = analysisModeSelect ? getValidMode(analysisModeSelect.value) : 'structural';
     const getModeConfig = () => MODE_CONFIG[analysisMode] || MODE_CONFIG.structural;
     const presetIllustrationMetadata = {
-        example23: {
-            key: 'example23',
-            src: 'images/2_3_example.png',
-            caption: 'Example 2.3 reference diagram'
-        },
         example24: {
             key: 'example24',
             src: 'images/example_2_4_wall.svg',
-            caption: 'Example 2.4 exterior wall diagram'
+            caption: 'Moaveni Example 1.2 thermal wall'
         },
         example11: {
             key: 'example11',
@@ -1394,31 +1385,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const exampleScenarios = {
-        cookCantilever: {
-            numNodes: 4,
-            globalMultiplier: 1,
-            decimalPlaces: 4,
-            elements: [
-                { node1: 1, node2: 2, area: 2e-4, length: 1.5, stiffness: 28000000, label: 'Bar 1' },
-                { node1: 2, node2: 3, area: 1.5e-4, length: 1.0, stiffness: 31500000, label: 'Bar 2' },
-                { node1: 3, node2: 4, area: 1e-4, length: 0.5, stiffness: 42000000, label: 'Bar 3' }
-            ],
-            fixedNodes: [true, false, false, false],
-            forces: [0, 0, 0, -50000]
-        },
-        moaveniParallel: {
-            numNodes: 4,
-            globalMultiplier: 1,
-            decimalPlaces: 4,
-            elements: [
-                { node1: 1, node2: 2, area: 1.2e-4, length: 1.0, stiffness: 25200000, label: 'Segment 1' },
-                { node1: 2, node2: 3, area: 1.0e-4, length: 0.8, stiffness: 26250000, label: 'Segment 2A' },
-                { node1: 2, node2: 3, area: 0.6e-4, length: 0.8, stiffness: 15750000, label: 'Segment 2B' },
-                { node1: 3, node2: 4, area: 0.8e-4, length: 0.9, stiffness: 18666666.6667, label: 'Segment 3' }
-            ],
-            fixedNodes: [true, false, false, false],
-            forces: [0, 0, 0, -40000]
-        },
         moaveniExample11: {
             analysisMode: 'structural',
             numNodes: 5,
@@ -1606,92 +1572,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (loadExampleCookBtn) {
-        loadExampleCookBtn.addEventListener('click', () => {
-            loadCustomExample(exampleScenarios.cookCantilever);
-
-            // Show modal with Cook et al. equivalent spring diagram
-            modalImg.src = 'images/cook_example.svg';
-            modalImg.alt = 'Cook et al. Cantilever Diagram';
-            const modalContent = document.querySelector('.modal-content');
-            if (modalContent.resetDragPosition) {
-                modalContent.resetDragPosition();
-            }
-            modal.style.display = 'flex';
-        });
-    }
-
-    if (loadExampleMoaveniBtn) {
-        loadExampleMoaveniBtn.addEventListener('click', () => {
-            loadCustomExample(exampleScenarios.moaveniParallel);
-        });
-    }
-
-    loadExample3Btn.addEventListener('click', () => {
-        numNodesInput.value = 5;
-        globalMultiplierInput.value = 1;
-        decimalPlacesInput.value = 4;
-
-        elementsContainer.innerHTML = ''; // Clear existing elements
-        addElementRow(1, 2, 1.5, 1, 'Element 1');
-        addElementRow(2, 3, 1.5, 1, 'Element 2');
-        addElementRow(2, 3, 2, 1, 'Element 3 (Parallel)');
-        addElementRow(2, 4, 5, 1, 'Element 4');
-        addElementRow(4, 5, 5, 1, 'Element 5');
-        addElementRow(3, 4, 2.5, 1, 'Element 6');
-
-        generateBoundaryConditionsUI(5, [true, false, false, false, true]); // Fixed nodes 1 and 5
-        generateForcesUI(5, [0, 100, 0, 100, 0]); // F2=100, F4=100
-        markMatrixDirty();
-        generateAndDisplayMatrix();
-        saveState();
-        
-        // Show modal with example 2.3 image
-        modalImg.src = 'images/2_3_example.png';
-        modalImg.alt = 'Example 2.3 Diagram';
-        // Reset modal position to center before showing
-        const modalContent = document.querySelector('.modal-content');
-        if (modalContent.resetDragPosition) {
-            modalContent.resetDragPosition();
-        }
-        
-        modal.style.display = 'flex'; // Show the modal
-        registerPresetIllustration('example23');
-    });
-
     if (loadExample4Btn) {
         loadExample4Btn.addEventListener('click', () => {
             loadCustomExample(exampleScenarios.thermalExteriorWall);
             modalImg.src = 'images/example_2_4_wall.svg';
-            modalImg.alt = 'Example 2.4 Exterior Wall Diagram';
+            modalImg.alt = 'Moaveni Example 1.2 thermal wall diagram';
             const modalContent = document.querySelector('.modal-content');
             if (modalContent.resetDragPosition) {
                 modalContent.resetDragPosition();
             }
             modal.style.display = 'flex';
             registerPresetIllustration('example24');
-        });
-    }
-
-    if (activity23Btn) {
-        activity23Btn.addEventListener('click', () => {
-            numNodesInput.value = 5;
-            globalMultiplierInput.value = 1;
-            decimalPlacesInput.value = 4;
-
-            elementsContainer.innerHTML = ''; // Clear existing elements
-            addElementRow(1, 2, 500, 1, 'k1');
-            addElementRow(2, 4, 400, 1, 'k2');
-            addElementRow(2, 3, 600, 1, 'k3');
-            addElementRow(1, 3, 200, 1, 'k4');
-            addElementRow(3, 4, 400, 1, 'k5');
-            addElementRow(4, 5, 300, 1, 'k6');
-
-            generateBoundaryConditionsUI(5, [true, false, false, false, true]); // Fixed nodes 1 and 5
-            generateForcesUI(5, [0, 0, -1000, 0, 0]); // F3=-1000
-            markMatrixDirty();
-            generateAndDisplayMatrix();
-            saveState();
         });
     }
 
@@ -1914,9 +1805,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const diagramError = diagramResult.error;
         const formatGraphicPath = (path) => `\\detokenize{${path}}`;
         const requestedExampleFigures = [];
-        if (activePresetIllustrations.has('example23')) {
-            requestedExampleFigures.push(presetIllustrationMetadata.example23);
-        }
         if (activePresetIllustrations.has('example11')) {
             requestedExampleFigures.push(presetIllustrationMetadata.example11);
         }
