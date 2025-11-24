@@ -2113,7 +2113,8 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryLines.push(`\\subsection*{Preset Context}\n`);
             summaryLines.push(`\\begin{itemize}\n`);
             presetContextNotes.forEach(note => {
-                summaryLines.push(`    \\item ${escapeLatexPreserveMath(note)}\n`);
+                // Notes are pre-formatted with inline math; don't escape further.
+                summaryLines.push(`    \\item ${note}\n`);
             });
             summaryLines.push(`\\end{itemize}\n\n`);
         }
