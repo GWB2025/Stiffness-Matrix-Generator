@@ -1,4 +1,4 @@
-# 1D Stiffness Matrix Analyser
+# Direct Formulation (1D Stiffness Matrix Analyser)
 
 [![Launch in Browser](https://img.shields.io/badge/Launch-Browser%20App-blue)](https://gwb2025.github.io/Stiffness-Matrix-Generator/)
 
@@ -37,10 +37,11 @@ The “Example 1.1” preset mirrors the direct-formulation walk-through in Saee
 *   Node 1 is fixed, Node 5 carries the P = 1000 lb tip load, and all intermediate nodes are free.
 
 These inputs let you reproduce the published nodal displacements, reaction force, and element stresses for the tapered bar without re-entering the data by hand. The preset is a concise restatement of the Example 1.1 problem published in Saeed Moaveni’s *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008; Library of Congress TA347.F5 M62 2007, ISBN 0‑13‑189080‑8).
+The geometry and units are pulled directly from `Moaveni_Example_1_1_Imperial_Units_Summary.pdf` so the lb-in figures on screen match the supplied PDF scan.
 
 ### Moaveni Example 1.2 Thermal Wall
 
-The “Example 1.2” preset mirrors the thermal walk-through from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008): a 2×4 exterior wall with a 150 ft² exposed area, outside air at 20 °F, and an indoor temperature of 70 °F. The six layers listed in Moaveni’s table are modeled as sequential thermal elements, each using the book’s U-factor (Btu/hr·ft²·°F) directly as the element conductance so the nodal temperatures (20.59, 23.41, 27.97, 66.08, 67.64 °F) and 520 Btu/hr heat loss match the worked example:
+The “Example 1.2” preset mirrors the thermal walk-through from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008): a 2×4 exterior wall with a 150 ft² exposed area, outside air at 20 °F, and an indoor temperature of 70 °F. The six layers listed in Moaveni’s imperial table are modeled as sequential thermal elements, each using the U-factor derived directly from the listed resistances (hr·ft²·°F/Btu → Btu/hr·ft²·°F) so the nodal temperatures (20.59, 23.41, 27.97, 66.08, 67.64 °F) and 520 Btu/hr heat loss match the worked example:
 
 *   Outside film (winter, 15 mph), U = 5.88
 *   Wood siding (1/2 in. lapped), U = 1.23

@@ -73,6 +73,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let elementStressesResult = [];
     let elementForcesResult = [];
     let matrixForExport = { K: null, invK: null, kHeaders: null, invKHeaders: null, kMultiplierHtml: '', invKMultiplierHtml: '', kNumericMultiplier: 1, invKNumericMultiplier: 1 };
+    const DEFAULT_BULK_PROPERTY = {
+        structural: 210e9, // Pa, common steel default
+        thermal: 1 // generic thermal conductivity default (e.g., 1 Btu/hr·ft·°F or ~1 W/m·K)
+    };
     const MODE_CONFIG = {
         structural: {
             key: 'structural',
@@ -176,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             key: 'thermal',
             displayName: 'Thermal conduction',
             bulkPropertyLabel: 'Thermal Conductivity (k)',
-            bulkPropertyDescription: 'Enter a global thermal conductivity used when auto-calculating conductance values from A and L.',
+            bulkPropertyDescription: 'Enter a global thermal conductivity used when auto-calculating conductance values from A and L (default k ≈ 1 in your chosen units, e.g., Btu/hr·ft·°F).',
             loadHeading: 'Applied Heat Loads (Q)',
             loadDescription: 'Specify the net heat entering each node (positive adds heat).',
             loadSymbol: 'Q',
@@ -271,19 +275,38 @@ document.addEventListener('DOMContentLoaded', () => {
             ]
         }
     };
+    const THERMAL_BOUNDARY_TEXT = {
+        default: {
+            boundaryValueLabel: 'Prescribed Temperature (°C)',
+            boundaryValuePlaceholder: 'e.g., 21',
+            boundaryValueTitle: 'Enter the enforced nodal temperature (leave blank if unknown).'
+        },
+        imperial: {
+            boundaryValueLabel: 'Prescribed Temperature (°F)',
+            boundaryValuePlaceholder: 'e.g., 70',
+            boundaryValueTitle: 'Enter the enforced nodal temperature in °F (leave blank if unknown).'
+        }
+    };
+    let thermalBoundaryTextKey = 'default';
     const getValidMode = (mode) => (MODE_CONFIG[mode] ? mode : 'structural');
     let analysisMode = analysisModeSelect ? getValidMode(analysisModeSelect.value) : 'structural';
-    const getModeConfig = () => MODE_CONFIG[analysisMode] || MODE_CONFIG.structural;
+    const getModeConfig = () => {
+        const baseConfig = MODE_CONFIG[analysisMode] || MODE_CONFIG.structural;
+        if (analysisMode === 'thermal') {
+            return { ...baseConfig, ...(THERMAL_BOUNDARY_TEXT[thermalBoundaryTextKey] || THERMAL_BOUNDARY_TEXT.default) };
+        }
+        return baseConfig;
+    };
     const presetIllustrationMetadata = {
         example24: {
             key: 'example24',
             src: 'images/example_1_2.png',
-            caption: 'Moaveni Example 1.2 thermal wall'
+            caption: 'Moaveni Example 1.2 thermal wall (imperial)'
         },
         example11: {
             key: 'example11',
-            src: 'images/example_1_1.svg',
-            caption: 'Moaveni Example 1.1 tapered bar'
+            src: 'images/example_1_1.png',
+            caption: 'Moaveni Example 1.1 tapered bar (imperial)'
         }
     };
     const activePresetIllustrations = new Set();
@@ -482,6 +505,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const wrapLabel = (text, maxLen = 18) => {
+        if (!text) return [];
+        const words = text.split(/\s+/);
+        const lines = [];
+        let current = '';
+        words.forEach(word => {
+            if ((current + ' ' + word).trim().length > maxLen && current.length > 0) {
+                lines.push(current.trim());
+                current = word;
+            } else {
+                current = (current + ' ' + word).trim();
+            }
+        });
+        if (current) lines.push(current.trim());
+        return lines;
+    };
+
     const computeDiagramLayout = ({ alertOnError = false } = {}) => {
         const numNodes = parseInt(numNodesInput.value, 10);
         if (!Number.isFinite(numNodes) || numNodes < 2 || numNodes > 10) {
@@ -604,6 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 node1: el.node1,
                 node2: el.node2,
                 label: el.label,
+                labelLines: wrapLabel(el.label, 20),
                 startX,
                 startY,
                 endX,
@@ -667,7 +708,16 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.forEach(segment => {
             svg += `<line x1="${segment.startX}" y1="${segment.startY}" x2="${segment.endX}" y2="${segment.endY}" stroke="#34495e" stroke-width="2"/>`;
             if (segment.label) {
-                svg += `<text x="${segment.labelX}" y="${segment.labelY}" text-anchor="middle" font-size="12" fill="#e67e22">${segment.label}</text>`;
+                const lines = Array.isArray(segment.labelLines) && segment.labelLines.length ? segment.labelLines : [segment.label];
+                const lineHeight = 13;
+                const totalHeight = lineHeight * lines.length;
+                const startY = segment.labelY - (totalHeight - lineHeight) / 2;
+                svg += `<text x="${segment.labelX}" y="${startY}" text-anchor="middle" font-size="12" fill="#e67e22">`;
+                lines.forEach((line, idx) => {
+                    const dy = idx === 0 ? 0 : lineHeight;
+                    svg += `<tspan x="${segment.labelX}" dy="${dy}">${line}</tspan>`;
+                });
+                svg += `</text>`;
             }
         });
 
@@ -705,7 +755,9 @@ document.addEventListener('DOMContentLoaded', () => {
         layout.elements.forEach(segment => {
             tikz += `    \\draw[line width=1pt,color=black!70] (${segment.startX},${segment.startY}) -- (${segment.endX},${segment.endY});\n`;
             if (segment.label) {
-                tikz += `    \\node[text=orange!80!black,font=\\scriptsize] at (${segment.labelX},${segment.labelY}){${escapeLatex(segment.label)}};\n`;
+                const lines = Array.isArray(segment.labelLines) && segment.labelLines.length ? segment.labelLines : [segment.label];
+                const tikzLabel = lines.map(escapeLatex).join('\\\\');
+                tikz += `    \\node[text=orange!80!black,font=\\scriptsize] at (${segment.labelX},${segment.labelY}){\\shortstack{${tikzLabel}}};\n`;
             }
         });
 
@@ -1067,13 +1119,43 @@ document.addEventListener('DOMContentLoaded', () => {
         updateActionButtonStates();
     };
 
-    const setAnalysisMode = (mode, { skipSave = false, refreshInputs = true } = {}) => {
+    const applyDefaultBulkPropertyIfNeeded = (prevMode, nextMode) => {
+        if (!youngsModulusInput) return;
+        const currentVal = parseFloat(youngsModulusInput.value);
+        const nextDefault = DEFAULT_BULK_PROPERTY[nextMode];
+        const prevDefault = DEFAULT_BULK_PROPERTY[prevMode];
+        if (nextDefault === undefined) return;
+        const resetToNextDefault = () => {
+            youngsModulusInput.value = nextDefault;
+        };
+        if (!Number.isFinite(currentVal)) {
+            return resetToNextDefault();
+        }
+        if (prevDefault !== undefined && Math.abs(currentVal - prevDefault) < 1e-9) {
+            return resetToNextDefault();
+        }
+        if (nextMode === 'thermal' && currentVal > 1e4) {
+            return resetToNextDefault();
+        }
+        if (nextMode === 'structural' && currentVal < 1e5) {
+            return resetToNextDefault();
+        }
+    };
+
+    const setAnalysisMode = (mode, { skipSave = false, refreshInputs = true, thermalUnitKey } = {}) => {
         const nextMode = getValidMode(mode);
         if (analysisMode === nextMode && refreshInputs) {
             updateModeUI({ refreshInputs });
             return;
         }
+        if (nextMode === 'thermal') {
+            thermalBoundaryTextKey = thermalUnitKey && THERMAL_BOUNDARY_TEXT[thermalUnitKey] ? thermalUnitKey : 'default';
+        } else {
+            thermalBoundaryTextKey = 'default';
+        }
+        const previousMode = analysisMode;
         analysisMode = nextMode;
+        applyDefaultBulkPropertyIfNeeded(previousMode, nextMode);
         updateModeUI({ refreshInputs });
         markMatrixDirty();
         if (!skipSave) {
@@ -1092,11 +1174,13 @@ document.addEventListener('DOMContentLoaded', () => {
             forces = [],
             autoGenerateMatrix = true,
             analysisMode: presetMode,
-            youngsModulus
+            youngsModulus,
+            temperatureUnit
         } = config;
 
         if (presetMode) {
-            setAnalysisMode(presetMode, { skipSave: true, refreshInputs: false });
+            const unitKey = temperatureUnit === 'F' ? 'imperial' : 'default';
+            setAnalysisMode(presetMode, { skipSave: true, refreshInputs: false, thermalUnitKey: unitKey });
         }
 
         numNodesInput.value = numNodes;
@@ -1104,6 +1188,12 @@ document.addEventListener('DOMContentLoaded', () => {
         decimalPlacesInput.value = decimalPlaces;
         if (youngsModulusInput && typeof youngsModulus === 'number' && !Number.isNaN(youngsModulus)) {
             youngsModulusInput.value = youngsModulus;
+        } else if (youngsModulusInput) {
+            const modeForDefault = presetMode ? getValidMode(presetMode) : analysisMode;
+            const defaultK = DEFAULT_BULK_PROPERTY[modeForDefault];
+            if (defaultK !== undefined) {
+                youngsModulusInput.value = defaultK;
+            }
         }
 
         elementsContainer.innerHTML = '';
@@ -1384,35 +1474,83 @@ document.addEventListener('DOMContentLoaded', () => {
         return { invertedK, freeNodesIndices, fixedNodesIndices, globalMultiplier };
     };
 
+    const moaveniExample11Imperial = (() => {
+        const modulus = 10.4e6; // lb/in^2, aluminum
+        const geometry = {
+            widthTop: 2, // in
+            widthBottom: 1, // in
+            thickness: 0.125, // in
+            totalLength: 10, // in
+            elementCount: 4
+        };
+        const elementLength = geometry.totalLength / geometry.elementCount;
+        const tipLoad = 1000; // lb
+        const nodeAreas = Array.from({ length: geometry.elementCount + 1 }, (_, idx) => {
+            const fraction = idx / geometry.elementCount;
+            const width = geometry.widthTop + (geometry.widthBottom - geometry.widthTop) * fraction;
+            return width * geometry.thickness;
+        });
+        const elementAreas = Array.from({ length: geometry.elementCount }, (_, idx) => (nodeAreas[idx] + nodeAreas[idx + 1]) / 2);
+        const stiffnesses = elementAreas.map(area => (area * modulus) / elementLength);
+        const elements = elementAreas.map((area, idx) => ({
+            node1: idx + 1,
+            node2: idx + 2,
+            area,
+            length: elementLength,
+            stiffness: stiffnesses[idx],
+            label: `k${idx + 1}`
+        }));
+        return {
+            preset: {
+                analysisMode: 'structural',
+                numNodes: geometry.elementCount + 1,
+                globalMultiplier: 1,
+                decimalPlaces: 6,
+                youngsModulus: modulus,
+                elements,
+                fixedNodes: [true, false, false, false, false],
+                forces: [0, 0, 0, 0, tipLoad],
+                metadata: {
+                    unitSystem: 'imperial (lb-in)',
+                    geometry: { ...geometry, elementLength },
+                    averageAreas: elementAreas,
+                    stiffnesses,
+                    tipLoad,
+                    modulus,
+                    source: 'Moaveni_Example_1_1_Imperial_Units_Summary.pdf'
+                }
+            }
+        };
+    })();
+
     const exampleScenarios = {
-        moaveniExample11: {
-            analysisMode: 'structural',
-            numNodes: 5,
-            globalMultiplier: 1,
-            decimalPlaces: 6,
-            youngsModulus: 10.4e6,
-            elements: [
-                { node1: 1, node2: 2, area: 0.234375, length: 2.5, stiffness: 975000, label: 'k1' },
-                { node1: 2, node2: 3, area: 0.203125, length: 2.5, stiffness: 845000, label: 'k2' },
-                { node1: 3, node2: 4, area: 0.171875, length: 2.5, stiffness: 715000, label: 'k3' },
-                { node1: 4, node2: 5, area: 0.140625, length: 2.5, stiffness: 585000, label: 'k4' }
-            ],
-            fixedNodes: [true, false, false, false, false],
-            forces: [0, 0, 0, 0, 1000]
-        },
+        moaveniExample11: moaveniExample11Imperial.preset,
         thermalExteriorWall: {
             analysisMode: 'thermal',
+            temperatureUnit: 'F',
             numNodes: 7,
             globalMultiplier: 1,
             decimalPlaces: 4,
-            elements: [
-                { node1: 1, node2: 2, area: 150, length: 1, stiffness: 5.88, label: 'Outside film' },
-                { node1: 2, node2: 3, area: 150, length: 1, stiffness: 1.23, label: 'Wood siding' },
-                { node1: 3, node2: 4, area: 150, length: 1, stiffness: 0.76, label: 'Sheathing' },
-                { node1: 4, node2: 5, area: 150, length: 1, stiffness: 0.091, label: 'Insulation batt' },
-                { node1: 5, node2: 6, area: 150, length: 1, stiffness: 2.22, label: 'Gypsum board' },
-                { node1: 6, node2: 7, area: 150, length: 1, stiffness: 1.47, label: 'Inside film' }
-            ],
+            elements: (() => {
+                const area = 150; // ft² exposed area from the example
+                const layersImperial = [
+                    { label: 'Outside film (winter, 15 mph wind)', resistance: 0.17 },
+                    { label: 'Siding, wood (1/2 in, 8 in lapped)', resistance: 0.81 },
+                    { label: 'Sheathing (1/2 in regular)', resistance: 1.32 },
+                    { label: 'Insulation batt (3–3½ in)', resistance: 11.0 },
+                    { label: 'Gypsum wall board (1/2 in)', resistance: 0.45 },
+                    { label: 'Inside film (winter)', resistance: 0.68 }
+                ];
+                return layersImperial.map((layer, idx) => ({
+                    node1: idx + 1,
+                    node2: idx + 2,
+                    area,
+                    length: 1,
+                    // U-factor in Btu/hr·ft²·°F derived from the listed resistance
+                    stiffness: parseFloat((1 / layer.resistance).toFixed(3)),
+                    label: layer.label
+                }));
+            })(),
             fixedNodes: [
                 { fixed: true, value: 20 },
                 { fixed: false, value: '' },
@@ -1562,7 +1700,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadExample11Btn.addEventListener('click', () => {
             loadCustomExample(exampleScenarios.moaveniExample11);
             modalImg.src = 'images/example_1_1.png';
-            modalImg.alt = 'Moaveni Example 1.1 tapered bar diagram';
+            modalImg.alt = 'Moaveni Example 1.1 tapered bar diagram (imperial units)';
             const modalContent = document.querySelector('.modal-content');
             if (modalContent.resetDragPosition) {
                 modalContent.resetDragPosition();
@@ -1576,7 +1714,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadExample4Btn.addEventListener('click', () => {
             loadCustomExample(exampleScenarios.thermalExteriorWall);
             modalImg.src = 'images/example_1_2.png';
-            modalImg.alt = 'Moaveni Example 1.2 thermal wall diagram';
+            modalImg.alt = 'Moaveni Example 1.2 thermal wall diagram (imperial units)';
             const modalContent = document.querySelector('.modal-content');
             if (modalContent.resetDragPosition) {
                 modalContent.resetDragPosition();
@@ -1810,6 +1948,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activePresetIllustrations.has('example11')) {
             requestedExampleFigures.push(presetIllustrationMetadata.example11);
         }
+        if (activePresetIllustrations.has('example24')) {
+            requestedExampleFigures.push(presetIllustrationMetadata.example24);
+        }
+        const presetContextNotes = [];
+        if (activePresetIllustrations.has('example11') && exampleScenarios.moaveniExample11?.metadata) {
+            const meta = exampleScenarios.moaveniExample11.metadata;
+            const formatPlainEngineering = (value) => {
+                const { value: base, exponent } = formatEngineeringNotation(value, decimalPlaces);
+                return exponent !== 0 ? `${base}e${exponent}` : base;
+            };
+            const modulusText = formatPlainEngineering(meta.modulus);
+            const areaListText = meta.averageAreas.map(area => formatPlainEngineering(area)).join(', ');
+            const stiffnessListText = meta.stiffnesses.map(k => formatPlainEngineering(k)).join(', ');
+            presetContextNotes.push(
+                `Moaveni Example 1.1 (${meta.unitSystem || 'imperial lb-in'}) from ${meta.source || 'the supplied PDF'}: taper ${meta.geometry.widthTop} in -> ${meta.geometry.widthBottom} in, thickness ${meta.geometry.thickness} in, total length ${meta.geometry.totalLength} in split into four ${meta.geometry.elementLength} in elements.`
+            );
+            presetContextNotes.push(`Material modulus E = ${modulusText} lb/in^2, tip load P = ${meta.tipLoad} lb.`);
+            presetContextNotes.push(`Element areas [${areaListText}] in^2; element stiffnesses [${stiffnessListText}] lb/in.`);
+        }
 
         const elementRows = elementsContainer.querySelectorAll('.element-row');
         const elementsData = Array.from(elementRows).map((row, index) => {
@@ -1890,6 +2047,8 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryLines.push(`% LaTeX Summary from Stiffness Matrix Generator\n`);
         summaryLines.push(`% Generated on: ${timestamp.toUTCString()}\n\n`);
         summaryLines.push(`\\documentclass{article}\n`);
+        summaryLines.push(`\\usepackage[T1]{fontenc}\n`);
+        summaryLines.push(`\\usepackage[utf8]{inputenc}\n`);
         summaryLines.push(`\\usepackage{amsmath}\n`);
         summaryLines.push(`\\usepackage{booktabs}\n`);
         summaryLines.push(`\\usepackage{graphicx}\n`);
@@ -1935,7 +2094,20 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryLines.push(`    \\item Number of Nodes: ${nodeCount || '---'}\n`);
         summaryLines.push(`    \\item ${escapeLatex(modeConfig.bulkPropertyLabel)}: ${formatOptionalValue(bulkPropertyValue)}\n`);
         summaryLines.push(`    \\item Global Multiplier: ${formatOptionalValue(globalMultiplierValue)}\n`);
+        if (modeConfig.key === 'thermal') {
+            const tempUnitsLatex = thermalBoundaryTextKey === 'imperial' ? '$^\\circ$F' : '$^\\circ$C';
+            summaryLines.push(`    \\item Temperature Units: ${tempUnitsLatex}\n`);
+        }
         summaryLines.push(`\\end{itemize}\n\n`);
+
+        if (presetContextNotes.length > 0) {
+            summaryLines.push(`\\subsection*{Preset Context}\n`);
+            summaryLines.push(`\\begin{itemize}\n`);
+            presetContextNotes.forEach(note => {
+                summaryLines.push(`    \\item ${escapeLatex(note)}\n`);
+            });
+            summaryLines.push(`\\end{itemize}\n\n`);
+        }
 
         const summaryFormulae = Array.isArray(modeConfig.summaryFormulae) ? modeConfig.summaryFormulae : [];
         if (summaryFormulae.length > 0) {
@@ -1969,6 +2141,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         summaryLines.push(`\\subsection*{Element Inventory}\n`);
+        summaryLines.push(`\\resizebox{\\textwidth}{!}{%\n`);
         summaryLines.push(`\\begin{tabular}{|l|c|c|r|r|r|c|}\n`);
         summaryLines.push(`\\hline\n`);
         summaryLines.push(`\\textbf{Label} & \\textbf{Node Left} & \\textbf{Node Right} & \\textbf{Area (A)} & \\textbf{Length (l)} & \\textbf{${escapeLatex(modeConfig.elementCoefficientLabel)}} & \\textbf{Source} \\\\\n`);
@@ -1981,7 +2154,8 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryLines.push(`\\multicolumn{7}{|c|}{No elements defined.} \\\\\n`);
         }
         summaryLines.push(`\\hline\n`);
-        summaryLines.push(`\\end{tabular}\n\n`);
+        summaryLines.push(`\\end{tabular}\n`);
+        summaryLines.push(`}%\n\n`);
 
         summaryLines.push(`\\paragraph{Element Statistics}\n`);
         summaryLines.push(`\\begin{tabular}{|l|r|}\n`);
@@ -2011,22 +2185,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         summaryLines.push(`\\subsection*{System Diagram}\n`);
-        if (diagramLayout) {
-            const tikzFigure = renderDiagramTikz(diagramLayout, decimalPlaces);
-            summaryLines.push(`\\begin{figure}[h]\n\\centering\n${tikzFigure}\\caption{Automatically generated node and element connectivity diagram.}\n\\end{figure}\n\n`);
-        } else {
-            summaryLines.push(`${diagramError ? escapeLatex(diagramError) : 'Diagram unavailable. Ensure nodes and elements are defined before exporting.'}\n\n`);
-        }
-
-        summaryLines.push(`\\subsection*{Preset Reference Images}\n`);
-        if (requestedExampleFigures.length > 0) {
+        const hasPresetFigures = requestedExampleFigures.length > 0;
+        if (hasPresetFigures) {
             requestedExampleFigures.forEach(fig => {
                 summaryLines.push(`\\begin{figure}[h]\n\\centering\n\\includegraphics[width=0.85\\textwidth]{${formatGraphicPath(fig.src)}}\n\\caption{${escapeLatex(fig.caption)}}\n\\end{figure}\n\n`);
             });
             const figurePaths = requestedExampleFigures.map(fig => `\\texttt{${escapeLatex(fig.src)}}`).join(', ');
             summaryLines.push(`\\textit{${escapeLatex(modeConfig.presetImageReminderIntro)} ${figurePaths}.}\\par\n\n`);
+        } else if (diagramLayout) {
+            const tikzFigure = renderDiagramTikz(diagramLayout, decimalPlaces);
+            summaryLines.push(`\\begin{figure}[h]\n\\centering\n${tikzFigure}\\caption{Automatically generated node and element connectivity diagram.}\n\\end{figure}\n\n`);
         } else {
-            summaryLines.push(`No preset illustration was selected during this session.\n\n`);
+            summaryLines.push(`${diagramError ? escapeLatex(diagramError) : 'Diagram unavailable. Ensure nodes and elements are defined before exporting.'}\n\n`);
         }
 
         summaryLines.push(`\\subsection*{Computation Checklist}\n`);

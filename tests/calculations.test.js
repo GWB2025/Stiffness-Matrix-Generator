@@ -10,6 +10,43 @@ const approxEqual = (actual, expected, tolerance = 1e-9) => {
     );
 };
 
+const buildMoaveniExample11Imperial = () => {
+    const modulus = 10.4e6;
+    const widthTop = 2;
+    const widthBottom = 1;
+    const thickness = 0.125;
+    const totalLength = 10;
+    const elementCount = 4;
+    const elementLength = totalLength / elementCount;
+    const tipLoad = 1000;
+
+    const nodeAreas = Array.from({ length: elementCount + 1 }, (_, idx) => {
+        const fraction = idx / elementCount;
+        const width = widthTop + (widthBottom - widthTop) * fraction;
+        return width * thickness;
+    });
+
+    const elements = Array.from({ length: elementCount }, (_, idx) => {
+        const area = (nodeAreas[idx] + nodeAreas[idx + 1]) / 2;
+        return {
+            node1: idx + 1,
+            node2: idx + 2,
+            stiffness: (area * modulus) / elementLength,
+            area,
+            length: elementLength,
+            label: `k${idx + 1}`
+        };
+    });
+
+    return {
+        elements,
+        nodeAreas,
+        elementLength,
+        modulus,
+        tipLoad
+    };
+};
+
 test('assembleGlobalStiffnessMatrix builds expected matrix', () => {
     const matrix = Calculations.assembleGlobalStiffnessMatrix(3, [
         { node1: 1, node2: 2, stiffness: 1000 },
@@ -99,7 +136,7 @@ test('thermal interpretation returns expected heat flow and flux', () => {
 
     const heatFlux = Calculations.calculateElementStresses(elements, nodalTemperatures, 1);
     approxEqual(heatFlux[0].stress, -1500);
-   approxEqual(heatFlux[1].stress, -4800);
+    approxEqual(heatFlux[1].stress, -4800);
 });
 
 test('computeDisplacements respects prescribed boundary values', () => {
@@ -130,15 +167,27 @@ test('computeDisplacements respects prescribed boundary values', () => {
     approxEqual(reactionForces[2], 500);
 });
 
+test('Moaveni Example 1.1 imperial geometry matches the tabulated areas and stiffness', () => {
+    const { elements, nodeAreas, elementLength, modulus, tipLoad } = buildMoaveniExample11Imperial();
+    const expectedNodeAreas = [0.25, 0.21875, 0.1875, 0.15625, 0.125];
+    nodeAreas.forEach((area, idx) => approxEqual(area, expectedNodeAreas[idx]));
+
+    const expectedElementAreas = [0.234375, 0.203125, 0.171875, 0.140625];
+    const expectedStiffness = [975000, 845000, 715000, 585000];
+    approxEqual(elementLength, 2.5);
+    approxEqual(modulus, 10.4e6);
+    approxEqual(tipLoad, 1000);
+
+    elements.forEach((el, idx) => {
+        approxEqual(el.area, expectedElementAreas[idx]);
+        approxEqual(el.stiffness, expectedStiffness[idx]);
+    });
+});
+
 test('Moaveni Example 1.1 preset reproduces textbook displacements & stresses', () => {
-    const numNodes = 5;
-    const elements = [
-        { node1: 1, node2: 2, stiffness: 975000, area: 0.234375 },
-        { node1: 2, node2: 3, stiffness: 845000, area: 0.203125 },
-        { node1: 3, node2: 4, stiffness: 715000, area: 0.171875 },
-        { node1: 4, node2: 5, stiffness: 585000, area: 0.140625 }
-    ];
-    const forces = [0, 0, 0, 0, 1000];
+    const { elements, tipLoad } = buildMoaveniExample11Imperial();
+    const numNodes = elements.length + 1;
+    const forces = [0, 0, 0, 0, tipLoad];
     const fixedNodes = [true, false, false, false, false];
     const freeNodes = fixedNodes.map((fixed, index) => (fixed ? -1 : index)).filter(index => index !== -1);
     const globalMatrix = Calculations.assembleGlobalStiffnessMatrix(numNodes, elements);
@@ -169,14 +218,24 @@ test('Moaveni Example 1.1 preset reproduces textbook displacements & stresses', 
 });
 
 test('Moaveni Example 1.2 thermal wall matches nodal temperatures and heat flow', () => {
-    const elements = [
-        { node1: 1, node2: 2, stiffness: 5.88, area: 150 },
-        { node1: 2, node2: 3, stiffness: 1.23, area: 150 },
-        { node1: 3, node2: 4, stiffness: 0.76, area: 150 },
-        { node1: 4, node2: 5, stiffness: 0.091, area: 150 },
-        { node1: 5, node2: 6, stiffness: 2.22, area: 150 },
-        { node1: 6, node2: 7, stiffness: 1.47, area: 150 }
+    const resistances = [0.17, 0.81, 1.32, 11.0, 0.45, 0.68]; // hr·ft²·°F/Btu (imperial table)
+    const labels = [
+        'Outside film (winter, 15 mph wind)',
+        'Siding, wood (1/2 in, 8 in lapped)',
+        'Sheathing (1/2 in regular)',
+        'Insulation batt (3–3½ in)',
+        'Gypsum wall board (1/2 in)',
+        'Inside film (winter)'
     ];
+    const area = 150;
+    const elements = resistances.map((R, idx) => ({
+        node1: idx + 1,
+        node2: idx + 2,
+        stiffness: parseFloat((1 / R).toFixed(3)), // U-factor in Btu/hr·ft²·°F
+        area,
+        label: labels[idx],
+        length: 1
+    }));
     const numNodes = 7;
     const K = Calculations.assembleGlobalStiffnessMatrix(numNodes, elements);
     const fixedNodes = [true, false, false, false, false, false, true];
