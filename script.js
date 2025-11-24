@@ -1966,10 +1966,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const presetContextNotes = [];
         if (activePresetIllustrations.has('example11') && exampleScenarios.moaveniExample11?.metadata) {
             const meta = exampleScenarios.moaveniExample11.metadata;
-            const modulusText = formatEngineeringNotationForLatex(meta.modulus, decimalPlaces);
-            const tipLoadText = formatEngineeringNotationForLatex(meta.tipLoad, decimalPlaces);
-            const areaListText = meta.averageAreas.map(area => formatEngineeringNotationForLatex(area, decimalPlaces)).join(', ');
-            const stiffnessListText = meta.stiffnesses.map(k => formatEngineeringNotationForLatex(k, decimalPlaces)).join(', ');
+            const modulusText = formatEngineeringNotationForLatex(meta.modulus, decimalPlaces, false);
+            const tipLoadText = formatEngineeringNotationForLatex(meta.tipLoad, decimalPlaces, false);
+            const areaListText = meta.averageAreas.map(area => formatEngineeringNotationForLatex(area, decimalPlaces, false)).join(', ');
+            const stiffnessListText = meta.stiffnesses.map(k => formatEngineeringNotationForLatex(k, decimalPlaces, false)).join(', ');
             presetContextNotes.push(
                 `Moaveni Example 1.1 (${meta.unitSystem || 'imperial lb-in'}) from ${meta.source || 'the supplied PDF'}: taper ${meta.geometry.widthTop} in -> ${meta.geometry.widthBottom} in, thickness ${meta.geometry.thickness} in, total length ${meta.geometry.totalLength} in split into four ${meta.geometry.elementLength} in elements.`
             );
@@ -2113,7 +2113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryLines.push(`\\subsection*{Preset Context}\n`);
             summaryLines.push(`\\begin{itemize}\n`);
             presetContextNotes.forEach(note => {
-                summaryLines.push(`    \\item ${escapeLatex(note)}\n`);
+                summaryLines.push(`    \\item ${escapeLatexPreserveMath(note)}\n`);
             });
             summaryLines.push(`\\end{itemize}\n\n`);
         }
