@@ -1966,18 +1966,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const presetContextNotes = [];
         if (activePresetIllustrations.has('example11') && exampleScenarios.moaveniExample11?.metadata) {
             const meta = exampleScenarios.moaveniExample11.metadata;
-            const formatPlainEngineering = (value) => {
-                const { value: base, exponent } = formatEngineeringNotation(value, decimalPlaces);
-                return exponent !== 0 ? `${base}e${exponent}` : base;
-            };
-            const modulusText = formatPlainEngineering(meta.modulus);
-            const areaListText = meta.averageAreas.map(area => formatPlainEngineering(area)).join(', ');
-            const stiffnessListText = meta.stiffnesses.map(k => formatPlainEngineering(k)).join(', ');
+            const modulusText = formatEngineeringNotationForLatex(meta.modulus, decimalPlaces);
+            const tipLoadText = formatEngineeringNotationForLatex(meta.tipLoad, decimalPlaces);
+            const areaListText = meta.averageAreas.map(area => formatEngineeringNotationForLatex(area, decimalPlaces)).join(', ');
+            const stiffnessListText = meta.stiffnesses.map(k => formatEngineeringNotationForLatex(k, decimalPlaces)).join(', ');
             presetContextNotes.push(
                 `Moaveni Example 1.1 (${meta.unitSystem || 'imperial lb-in'}) from ${meta.source || 'the supplied PDF'}: taper ${meta.geometry.widthTop} in -> ${meta.geometry.widthBottom} in, thickness ${meta.geometry.thickness} in, total length ${meta.geometry.totalLength} in split into four ${meta.geometry.elementLength} in elements.`
             );
-            presetContextNotes.push(`Material modulus E = ${modulusText} lb/in^2, tip load P = ${meta.tipLoad} lb.`);
-            presetContextNotes.push(`Element areas [${areaListText}] in^2; element stiffnesses [${stiffnessListText}] lb/in.`);
+            presetContextNotes.push(`Material modulus $E = ${modulusText}\\,\\text{lb/in}^2$, tip load $P = ${tipLoadText}\\,\\text{lb}$.`);
+            presetContextNotes.push(`Element areas [${areaListText}] $\\text{in}^2$; element stiffnesses [${stiffnessListText}] $\\text{lb/in}$.`);
         }
 
         const elementRows = elementsContainer.querySelectorAll('.element-row');
