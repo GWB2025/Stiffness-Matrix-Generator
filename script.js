@@ -437,6 +437,18 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/~/g, '\\textasciitilde{}')
             .replace(/\^/g, '\\textasciicircum{}');
     };
+    const escapeLatexPreserveMath = (value = '') => {
+        const str = value === null || value === undefined ? '' : String(value);
+        if (!str.includes('$')) return escapeLatex(str);
+
+        // Split on math delimiters and only escape the text outside math mode.
+        const segments = str.split('$');
+        const rebuilt = segments.map((segment, idx) => {
+            const isMath = idx % 2 === 1;
+            return isMath ? segment : escapeLatex(segment);
+        });
+        return rebuilt.join('$');
+    };
     const escapeHtml = (value = '') => {
         if (value === null || value === undefined) return '';
         return String(value)
@@ -2203,12 +2215,12 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryLines.push(`\\begin{tabular}{|l|c|}\n`);
         summaryLines.push(`\\hline\nTask & State \\\\\n\\hline\n`);
         const computationRows = [
-            { label: `${escapeLatex(modeConfig.matrixHeading)}`, ready: Boolean(matrixForExport.K), hint: `\\texttt{${escapeLatex(modeConfig.matrixButtonText)}}` },
+            { label: `${escapeLatexPreserveMath(modeConfig.matrixHeading)}`, ready: Boolean(matrixForExport.K), hint: `\\texttt{${escapeLatex(modeConfig.matrixButtonText)}}` },
             { label: 'Inverse reduced matrix ($K_r^{-1}$)', ready: Boolean(matrixForExport.invK), hint: '\\texttt{Invert Matrix}' },
-            { label: `${escapeLatex(modeConfig.primaryResultHeading)}`, ready: fullDisplacementVector.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.primarySolveButton)}}` },
-            { label: `${escapeLatex(modeConfig.reactionHeading)}`, ready: reactionForcesResult.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.primarySolveButton)}}` },
-            { label: `${escapeLatex(modeConfig.elementForceHeading)}`, ready: elementForcesResult.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.elementForceButton)}}` },
-            { label: `${escapeLatex(modeConfig.elementFluxHeading)}`, ready: elementStressesResult.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.elementFluxButton)}}` }
+            { label: `${escapeLatexPreserveMath(modeConfig.primaryResultHeading)}`, ready: fullDisplacementVector.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.primarySolveButton)}}` },
+            { label: `${escapeLatexPreserveMath(modeConfig.reactionHeading)}`, ready: reactionForcesResult.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.primarySolveButton)}}` },
+            { label: `${escapeLatexPreserveMath(modeConfig.elementForceHeading)}`, ready: elementForcesResult.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.elementForceButton)}}` },
+            { label: `${escapeLatexPreserveMath(modeConfig.elementFluxHeading)}`, ready: elementStressesResult.length > 0, hint: `\\texttt{${escapeLatex(modeConfig.elementFluxButton)}}` }
         ];
         computationRows.forEach(row => {
             const statusText = row.ready ? '\\textbf{Ready}' : `Pending (${row.hint})`;
@@ -2289,21 +2301,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         summaryLines.push(`\\section*{Analysis Results}\n`);
 
-        summaryLines.push(`\\subsection*{${escapeLatex(modeConfig.matrixHeading)}}\n`);
+        summaryLines.push(`\\subsection*{${escapeLatexPreserveMath(modeConfig.matrixHeading)}}\n`);
         if (matrixForExport.K) {
             summaryLines.push(generateLatexString(matrixForExport.K, matrixForExport.kHeaders, matrixForExport.kNumericMultiplier));
         } else {
             summaryLines.push(`Not calculated.\n\n`);
         }
 
-        summaryLines.push(`\\subsection*{Inverse of Reduced Matrix ($K_r^{-1}$)}\n`);
+        summaryLines.push(`\\subsection*{${escapeLatexPreserveMath('Inverse of Reduced Matrix ($K_r^{-1}$)')}}\n`);
         if (matrixForExport.invK) {
             summaryLines.push(generateLatexString(matrixForExport.invK, matrixForExport.invKHeaders, matrixForExport.invKNumericMultiplier));
         } else {
             summaryLines.push(`Not calculated.\n\n`);
         }
 
-        summaryLines.push(`\\subsection*{${escapeLatex(modeConfig.primaryResultHeading)}}\n`);
+        summaryLines.push(`\\subsection*{${escapeLatexPreserveMath(modeConfig.primaryResultHeading)}}\n`);
         if (fullDisplacementVector.length > 0) {
             summaryLines.push(`\\begin{tabular}{|c|r|}\n`);
             summaryLines.push(`\\hline\n`);
@@ -2320,7 +2332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryLines.push(`Not calculated.\n\n`);
         }
 
-        summaryLines.push(`\\subsection*{${escapeLatex(modeConfig.reactionHeading)}}\n`);
+        summaryLines.push(`\\subsection*{${escapeLatexPreserveMath(modeConfig.reactionHeading)}}\n`);
         if (reactionForcesResult.length > 0) {
             summaryLines.push(`\\begin{tabular}{|c|r|}\n`);
             summaryLines.push(`\\hline\n`);
@@ -2335,7 +2347,7 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryLines.push(`Not calculated.\n\n`);
         }
 
-        summaryLines.push(`\\subsection*{${escapeLatex(modeConfig.elementForceHeading)}}\n`);
+        summaryLines.push(`\\subsection*{${escapeLatexPreserveMath(modeConfig.elementForceHeading)}}\n`);
         if (elementForcesResult.length > 0) {
             summaryLines.push(`\\begin{tabular}{|l|r|}\n`);
             summaryLines.push(`\\hline\n`);
@@ -2365,7 +2377,7 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryLines.push(`Not calculated.\n\n`);
         }
 
-        summaryLines.push(`\\subsection*{${escapeLatex(modeConfig.elementFluxHeading)}}\n`);
+        summaryLines.push(`\\subsection*{${escapeLatexPreserveMath(modeConfig.elementFluxHeading)}}\n`);
         if (elementStressesResult.length > 0) {
             summaryLines.push(`\\begin{tabular}{|l|r|}\n`);
             summaryLines.push(`\\hline\n`);
