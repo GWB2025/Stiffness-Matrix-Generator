@@ -457,6 +457,19 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/>/g, '&gt;');
     };
 
+    const formatHeadingForDisplay = (value = '') => {
+        const str = String(value);
+        // Strip $...$ and common LaTeX wrappers, then map a few Greek symbols.
+        const withoutMathDelimiters = str.replace(/\$/g, '').replace(/[{}]/g, '');
+        const greekMap = {
+            '\\sigma': 'σ',
+            '\\lambda': 'λ',
+            '\\rho': 'ρ',
+            '\\theta': 'θ'
+        };
+        return withoutMathDelimiters.replace(/\\[a-zA-Z]+/g, (match) => greekMap[match] || match);
+    };
+
     const formatEngineeringNotationForLatex = (value, precision = 3, wrapInMathMode = true) => {
         const { value: formattedValue, exponent } = formatEngineeringNotation(value, precision);
 
@@ -1109,16 +1122,16 @@ document.addEventListener('DOMContentLoaded', () => {
             generateMatrixBtn.title = modeConfig.matrixButtonTitle;
         }
         if (displacementsTitleElement) {
-            displacementsTitleElement.textContent = modeConfig.primaryResultHeading;
+            displacementsTitleElement.textContent = formatHeadingForDisplay(modeConfig.primaryResultHeading);
         }
         if (reactionTitleElement) {
-            reactionTitleElement.textContent = modeConfig.reactionHeading;
+            reactionTitleElement.textContent = formatHeadingForDisplay(modeConfig.reactionHeading);
         }
         if (stressesTitleElement) {
-            stressesTitleElement.textContent = modeConfig.elementFluxHeading;
+            stressesTitleElement.textContent = formatHeadingForDisplay(modeConfig.elementFluxHeading);
         }
         if (elementForcesTitleElement) {
-            elementForcesTitleElement.textContent = modeConfig.elementForceHeading;
+            elementForcesTitleElement.textContent = formatHeadingForDisplay(modeConfig.elementForceHeading);
         }
         fixedNodesContainer.querySelectorAll('.fixed-value-input').forEach(input => {
             input.placeholder = modeConfig.boundaryValuePlaceholder;
