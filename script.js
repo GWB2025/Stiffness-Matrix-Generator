@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let elementForcesResult = [];
     let matrixForExport = { K: null, invK: null, kHeaders: null, invKHeaders: null, kMultiplierHtml: '', invKMultiplierHtml: '', kNumericMultiplier: 1, invKNumericMultiplier: 1 };
     const DEFAULT_BULK_PROPERTY = {
-        structural: 210e9, // Pa, common steel default
+        structural: 1, // Use a neutral default unless a preset overrides it
         thermal: 1 // generic thermal conductivity default (e.g., 1 Btu/hr·ft·°F or ~1 W/m·K)
     };
     const MODE_CONFIG = {
@@ -1013,7 +1013,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             numNodesInput.value = state.numNodes || 2;
             globalMultiplierInput.value = state.globalMultiplier || 1;
-            youngsModulusInput.value = state.youngsModulus || '210e9';
+            youngsModulusInput.value = state.youngsModulus || '1';
             decimalPlacesInput.value = state.decimalPlaces || 4;
 
             elementsContainer.innerHTML = '';
@@ -1098,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setAnalysisMode('structural', { skipSave: true, refreshInputs: false });
         numNodesInput.value = 2;
         globalMultiplierInput.value = 1;
-        document.getElementById('youngs-modulus').value = '210e9';
+        document.getElementById('youngs-modulus').value = '1';
         decimalPlacesInput.value = 4;
         elementsContainer.innerHTML = ''; // Clear all elements
         elementCount = 0;
@@ -1288,12 +1288,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return resetToNextDefault();
         }
         if (prevDefault !== undefined && Math.abs(currentVal - prevDefault) < 1e-9) {
-            return resetToNextDefault();
-        }
-        if (nextMode === 'thermal' && currentVal > 1e4) {
-            return resetToNextDefault();
-        }
-        if (nextMode === 'structural' && currentVal < 1e5) {
             return resetToNextDefault();
         }
     };
