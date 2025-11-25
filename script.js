@@ -2617,16 +2617,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elementStressesResult && elementStressesResult.length > 0) computedOutputs.push('Element stresses/flux');
 
         const presetNotes = [];
+        const presetFigures = [];
         if (activePresetIllustrations.has('example11') && exampleScenarios.moaveniExample11?.metadata) {
             const meta = exampleScenarios.moaveniExample11.metadata;
             presetNotes.push(`Preset: Moaveni Example 1.1 (${meta.unitSystem || 'imperial lb-in'})`);
+            presetFigures.push(presetIllustrationMetadata.example11);
         }
         if (activePresetIllustrations.has('example24')) {
             presetNotes.push('Preset: Moaveni Example 1.2 (thermal wall, imperial)');
+            presetFigures.push(presetIllustrationMetadata.example24);
         }
         if (activePresetIllustrations.has('problem6') && moaveniProblem6?.metadata) {
             const meta = moaveniProblem6.metadata;
             presetNotes.push(`Preset: ${meta.source || 'Moaveni Problem 6'}${meta.note ? ` — ${meta.note}` : ''}`);
+            presetFigures.push(presetIllustrationMetadata.problem6);
         }
 
         const lines = [];
@@ -2700,6 +2704,15 @@ document.addEventListener('DOMContentLoaded', () => {
             lines.push('| --- | --- |');
             elementStressesResult.forEach(item => {
                 lines.push(`| ${item.label} | ${formatEngineeringForText(item.stress, decimalPlaces)} |`);
+            });
+        }
+
+        if (presetFigures.length) {
+            lines.push('');
+            lines.push('## Preset Figures');
+            presetFigures.forEach(fig => {
+                if (!fig) return;
+                lines.push(`![${fig.caption || fig.key}](${fig.src})`);
             });
         }
 
