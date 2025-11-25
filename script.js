@@ -569,34 +569,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const promptWithHtml = (html, title = "HTML") => {
         const plain = html.replace(/<br\s*\/?>/gi, '\n');
-        const fallbackPrompt = () => prompt(`Copy the ${title} below:`, plain);
         const clipboard = navigator.clipboard;
 
-        // Prefer rich clipboard if supported
+        const doPrompt = () => prompt(`Copy the ${title} below:`, html);
+
+        // Try rich clipboard first
         if (clipboard && window.ClipboardItem) {
             const data = {
                 'text/html': new Blob([html], { type: 'text/html' }),
                 'text/plain': new Blob([plain], { type: 'text/plain' })
             };
-            clipboard.write([new ClipboardItem(data)]).catch(() => {
-                // Try plain text as fallback
-                if (clipboard.writeText) {
-                    clipboard.writeText(html).catch(fallbackPrompt);
-                } else {
-                    fallbackPrompt();
-                }
-            });
+            clipboard.write([new ClipboardItem(data)])
+                .catch(() => {
+                    if (clipboard.writeText) {
+                        clipboard.writeText(html).catch(doPrompt);
+                    } else {
+                        doPrompt();
+                    }
+                })
+                .finally(() => {
+                    // Always show prompt so users can paste manually if needed
+                    doPrompt();
+                });
             return;
         }
 
-        // Plain text clipboard fallback
+        // Plain clipboard fallback
         if (clipboard && clipboard.writeText) {
-            clipboard.writeText(html).catch(fallbackPrompt);
+            clipboard.writeText(html).catch(doPrompt).finally(doPrompt);
             return;
         }
 
         // Last resort prompt
-        fallbackPrompt();
+        doPrompt();
     };
 
     const translateMathText = (text) => {
