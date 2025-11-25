@@ -615,6 +615,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         lines.forEach(rawLine => {
             const line = rawLine.trimEnd();
+            const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+            if (imageMatch) {
+                const altText = translateMathText(imageMatch[1] || '');
+                const src = imageMatch[2] || '';
+                flushList(); flushTable();
+                htmlLines.push(`<p><img src="${escapeHtml(src)}" alt="${escapeHtml(altText)}"></p>`);
+                return;
+            }
             if (line.startsWith('# ')) {
                 flushList(); flushTable();
                 htmlLines.push(`<h1>${renderInline(line.slice(2).trim())}</h1>`);
