@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewMarkdownBtn = document.getElementById('preview-markdown-btn');
     const markdownPreviewModal = document.getElementById('markdown-preview-modal');
     const markdownPreviewContainer = document.getElementById('markdown-preview-container');
+    const generateHtmlSummaryBtn = document.getElementById('generate-html-btn');
 
     const CalculationsModule = window.Calculations;
     if (!CalculationsModule) {
@@ -564,6 +565,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!Number.isFinite(value)) return '---';
         const { value: formattedValue, exponent } = formatEngineeringNotation(value, decimalPlaces);
         return exponent !== 0 ? `${formattedValue} x 10^${exponent}` : `${formattedValue}`;
+    };
+
+    const promptWithHtml = (html, title = "HTML") => {
+        const plain = html.replace(/<br\s*\/?>/gi, '\n');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(html).catch(() => {}).finally(() => {
+                prompt(`Here is the ${title}. It has been copied to your clipboard when possible:`, plain);
+            });
+        } else {
+            prompt(`Copy the ${title} below:`, plain);
+        }
     };
 
     const translateMathText = (text) => {
@@ -2752,6 +2764,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (modalContent && modalContent.resetDragPosition) {
                 modalContent.resetDragPosition();
             }
+        });
+    }
+
+    if (generateHtmlSummaryBtn) {
+        generateHtmlSummaryBtn.addEventListener('click', () => {
+            const markdown = generateMarkdownSummary({ suppressPrompt: true });
+            const html = renderMarkdownSubset(markdown);
+            promptWithHtml(html, "HTML Analysis Summary");
         });
     }
 
