@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const bulkPropertyLabelElement = document.querySelector('label[for="youngs-modulus"]');
     const kTitleElement = document.getElementById('k-title');
     const invKTitleElement = document.getElementById('inv-k-title');
+    const INVERSE_HEADING_HTML = 'Inverse of Reduced Matrix (K<sub>r</sub><sup>-1</sup>)';
 
     const CalculationsModule = window.Calculations;
     if (!CalculationsModule) {
@@ -311,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         problem6: {
             key: 'problem6',
-            src: 'images/activity_2_3.png',
+            src: 'images/problem_6.png',
             caption: 'Moaveni Problem 6 spring network'
         }
     };
@@ -1121,7 +1122,7 @@ document.addEventListener('DOMContentLoaded', () => {
             kTitleElement.textContent = modeConfig.matrixHeading;
         }
         if (invKTitleElement) {
-            invKTitleElement.textContent = 'Inverse of Reduced Matrix (K_r⁻¹)';
+            invKTitleElement.innerHTML = INVERSE_HEADING_HTML;
         }
         if (calculateDisplacementsBtn) {
             calculateDisplacementsBtn.textContent = modeConfig.primarySolveButton;
@@ -1690,7 +1691,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const scaledInvertedK = invertedK.map(row => row.map(val => val * globalMultiplier));
         const inverseMultiplierText = formatMultiplier(globalMultiplier, true);
         const reducedMatrixHeaders = freeNodesIndices.map(i => i + 1);
-        displayMatrix(scaledInvertedK, 'inverse-matrix-container', 'inv-k-title', 'Inverse of Reduced Matrix (Kᵣ⁻¹)', reducedMatrixHeaders, inverseMultiplierText, 'inverse-matrix-multiplier', 1 / globalMultiplier);
+        displayMatrix(scaledInvertedK, 'inverse-matrix-container', 'inv-k-title', INVERSE_HEADING_HTML, reducedMatrixHeaders, inverseMultiplierText, 'inverse-matrix-multiplier', 1 / globalMultiplier);
     });
 
     calculateDisplacementsBtn.addEventListener('click', () => {
@@ -1788,7 +1789,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loadProblem6Btn) {
         loadProblem6Btn.addEventListener('click', () => {
             loadCustomExample(moaveniProblem6);
-            modalImg.src = 'images/activity_2_3.png';
+            modalImg.src = 'images/problem_6.png';
             modalImg.alt = 'Moaveni Problem 6 spring network';
             const modalContent = document.querySelector('.modal-content');
             if (modalContent.resetDragPosition) {
