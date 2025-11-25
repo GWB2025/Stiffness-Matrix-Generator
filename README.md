@@ -6,27 +6,14 @@ A web-based tool for generating and analysing 1D stiffness matrices for systems 
 
 ## Key Features
 
-*   **Dynamic System Definition**: Easily define the number of nodes and add or remove multiple spring elements.
-*   **Flexible Element Properties**: For each element, specify its connectivity (nodes), area, length, and stiffness.
-*   **Automatic Stiffness Calculation**: Optionally calculates an element's stiffness (`k`) automatically based on its Area (`A`), Length (`L`), and a global Young's Modulus (`E`).
-*   **Dual Analysis Modes**: Toggle between structural (axial springs/bars) and steady-state thermal conduction; labels, solvers, and LaTeX reports adapt automatically for each discipline.
-*   **Global Matrix Assembly**: Automatically generates the global stiffness matrix (`K`) from the individual element properties.
-*   **Boundary Conditions & Forces**: Apply fixed-node boundary conditions and specify external forces at each node.
-*   **Custom Boundary Values**: Enter non-zero prescribed displacements or temperatures directly on the fixed nodes to model known supports or Dirichlet thermal boundaries.
-*   **Complete Analysis Suite**:
-    *   Calculates the inverse of the reduced stiffness matrix (`Kr⁻¹`).
-    *   Solves for **Nodal Displacements** (`d`).
-    *   Calculates **Reaction Forces** (`R`) at fixed nodes.
-    *   Calculates internal **Element Forces** (`f`).
-    *   Calculates **Element Stresses** (`σ`).
-*   **Visualisation Tools**:
-    *   **System Diagram**: Generates a 2D diagram of the node/element layout, including boundary conditions and forces.
-    *   **Matrix Construction Helper**: Provides a step-by-step walkthrough of how the global stiffness matrix is assembled from individual elements.
-*   **LaTeX Export**:
-    *   Export the Global Stiffness Matrix or the Inverse Reduced Matrix as a LaTeX code snippet.
-    *   Generate a comprehensive **Analysis Summary** in LaTeX format, including all inputs and calculated results.
-*   **Example Problems**: Load predefined example problems to quickly get started.
-*   **Persistent State**: Your setup is automatically saved in your browser's local storage, so you can pick up where you left off.
+*   **Dual Analysis Modes**: Structural (axial springs/bars) and steady-state thermal conduction. Labels, units, solvers, and LaTeX exports adapt to the selected discipline.
+*   **Dynamic System Definition**: Choose node count, add/remove elements, set connectivity, and provide area/length/stiffness (or let the app auto-compute stiffness/conductance from E or k, A, and L).
+*   **Boundary Conditions & Loads**: Fix any node, enter prescribed displacements/temperatures, and apply nodal forces/heat loads. A global multiplier scales the assembled matrix when needed.
+*   **Computation Suite**: Builds the global matrix, forms and inverts the reduced matrix, then solves for displacements/temperatures, reaction forces, elemental forces, and stresses/heat flux.
+*   **Visual Aids**: A draggable system diagram renders the current model; a construction helper walks through how the global matrix is assembled.
+*   **Import/Export**: Save or load JSON states, export individual matrices to LaTeX, and generate a full LaTeX analysis summary (inputs, matrices, and results).
+*   **Example Library**: One-click presets for Moaveni Example 1.1 (tapered bar), Moaveni Example 1.2 (thermal wall), and Moaveni Problem 6 (spring network).
+*   **Persistent State**: Your setup is stored in local storage so you can resume later.
 
 ### Moaveni Example 1.1 Tapered Bar
 
@@ -52,18 +39,31 @@ The “Example 1.2” preset mirrors the thermal walk-through from Saeed Moaveni
 
 Loading the preset switches the app to thermal mode, fixes node 1 at 20 °F and node 7 at 70 °F, and leaves the intermediate nodes free so you can reproduce the book’s nodal temperature distribution and total heat loss with one click.
 
+### Moaveni Problem 6 Spring Network
+
+The “Problem 6” preset sets up the six-spring network from Moaveni (2008): parallel springs between nodes 2–3, fixed ends at nodes 1 and 5, and 10 lb loads at nodes 2 and 4. The preset matches the diagram in `images/problem_6.png` and preloads all element stiffnesses and boundary conditions so you can focus on the resulting displacements and reactions.
+
 ## How to Use
 
 1.  **Set Global Parameters**: Start by choosing the `Analysis Type`, defining the `Number of Nodes`, a `Global Multiplier`, and the discipline-specific material property (Young's Modulus for structural mode or Thermal Conductivity for thermal mode).
 2.  **Define Elements**: Click "Add Element" to create a new spring. For each element, define its label, which nodes it connects, and its physical properties (Area, Length). You can either input the stiffness `k` directly or check the "Calc k" box to have it computed for you.
-3.  **Set Boundary Conditions**: In the "Boundary Conditions" section, check the boxes corresponding to any nodes that are fixed and (optionally) type the prescribed displacement/temperature value for those nodes.
-4.  **Apply Forces**: In the "Applied Forces" section, enter any external forces applied at each node.
-5.  **Analyse**: Use the action buttons to perform calculations in sequence:
+3.  **Set Boundary Conditions**: In the "Boundary Conditions" section, tick fixed nodes and (optionally) enter prescribed displacement/temperature values.
+4.  **Apply Loads**: Enter nodal forces (structural) or heat loads (thermal) in the "Applied Forces/Loads" section.
+5.  **Analyse**: Use the action buttons in order:
     *   `Generate Stiffness Matrix`
     *   `Invert Matrix`
-    *   `Calculate Displacements`
-    *   `Calculate Stresses` / `Calculate Element Forces`
-6.  **Export**: Use the `Summary` button to get a full LaTeX report or the `TeX` buttons on the matrix tables to export them individually.
+    *   `Calculate Displacements` (also computes reactions)
+    *   `Calculate Stresses` / `Calculate Element Forces` (discipline-specific post-processing)
+6.  **Visualise**: Use the System Diagram button to view the layout and the Matrix Construction helper to see how `K` is assembled.
+7.  **Export**: Use `Summary` for a full LaTeX report, the `TeX` buttons on the matrix tables for quick snippets, or export/import JSON to share states.
+
+## Run Locally
+
+```bash
+python -m server.py
+```
+
+The dev server runs over HTTPS with the bundled self-signed cert. Open the printed URL (https://127.0.0.1:5001), bypass the browser warning, and start working. The app is also published at the GitHub Pages link above if you prefer not to run it locally.
 
 ## Technologies Used
 
