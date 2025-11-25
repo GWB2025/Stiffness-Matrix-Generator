@@ -2703,9 +2703,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        lines.push('');
-        lines.push('_Tip: Paste this into a Markdown viewer or the course forum. For LaTeX, use the existing Summary (LaTeX) button._');
-
         const markdown = lines.join('\n');
         if (!suppressPrompt) {
             promptWithText(markdown, "Markdown Analysis Summary");
