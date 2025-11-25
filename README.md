@@ -4,6 +4,10 @@
 
 A web-based tool for generating and analysing 1D stiffness matrices for systems of springs. This application is designed for engineers and students to quickly assemble and solve simple structural analysis problems.
 
+## Launch from GitHub
+
+Click the **Launch Browser App** badge above to open the live GitHub Pages build in your browser. No install or server is needed for the hosted version. If you run the app locally with `python -m server.py`, your browser may warn about the bundled self-signed certificate—proceed past the warning for local development, or use the hosted link to avoid it.
+
 ## Key Features
 
 *   **Dual Analysis Modes**: Structural (axial springs/bars) and steady-state thermal conduction. Labels, units, solvers, and LaTeX exports adapt to the selected discipline.
