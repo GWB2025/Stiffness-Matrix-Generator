@@ -2573,7 +2573,7 @@ document.addEventListener('DOMContentLoaded', () => {
         promptWithLatex(summary, "LaTeX Analysis Summary");
     };
 
-    const generateMarkdownSummary = () => {
+    const generateMarkdownSummary = ({ suppressPrompt = false } = {}) => {
         const btn = document.getElementById('generate-markdown-btn');
         if (btn) {
             btn.classList.add('is-flashing');
@@ -2706,8 +2706,11 @@ document.addEventListener('DOMContentLoaded', () => {
         lines.push('');
         lines.push('_Tip: Paste this into a Markdown viewer or the course forum. For LaTeX, use the existing Summary (LaTeX) button._');
 
-        promptWithText(lines.join('\n'), "Markdown Analysis Summary");
-        return lines.join('\n');
+        const markdown = lines.join('\n');
+        if (!suppressPrompt) {
+            promptWithText(markdown, "Markdown Analysis Summary");
+        }
+        return markdown;
     };
 
     const generateSummaryBtn = document.getElementById('generate-summary-btn');
@@ -2729,7 +2732,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         previewMarkdownBtn.addEventListener('click', () => {
-            const markdown = generateMarkdownSummary();
+            const markdown = generateMarkdownSummary({ suppressPrompt: true });
             const rendered = renderMarkdownSubset(markdown);
             markdownPreviewContainer.innerHTML = rendered;
             markdownPreviewModal.style.display = 'flex';
