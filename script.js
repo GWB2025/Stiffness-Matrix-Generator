@@ -566,6 +566,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return exponent !== 0 ? `${formattedValue} x 10^${exponent}` : `${formattedValue}`;
     };
 
+    const translateMathText = (text) => {
+        if (!text) return '';
+        let t = text.replace(/\$/g, '');
+        const greekMap = {
+            '\\sigma': 'σ',
+            '\\lambda': 'λ',
+            '\\rho': 'ρ',
+            '\\theta': 'θ'
+        };
+        t = t.replace(/\\[a-zA-Z]+/g, (match) => greekMap[match] || match);
+        return t;
+    };
+
     // Minimal Markdown renderer for predictable summary content
     const renderMarkdownSubset = (markdown) => {
         if (!markdown) return '';
@@ -590,7 +603,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const renderInline = (text) => {
             if (!text) return '';
-            let out = escapeHtml(text);
+            const normalized = translateMathText(text);
+            let out = escapeHtml(normalized);
             // inline code
             out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
             // bold then italic
