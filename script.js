@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         problem6: {
             key: 'problem6',
-            src: 'images/problem_6.png',
+            src: 'images/activity_2_3.png',
             caption: 'Moaveni Problem 6 spring network'
         }
     };
@@ -1788,7 +1788,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loadProblem6Btn) {
         loadProblem6Btn.addEventListener('click', () => {
             loadCustomExample(moaveniProblem6);
-            modalImg.src = 'images/problem_6.png';
+            modalImg.src = 'images/activity_2_3.png';
             modalImg.alt = 'Moaveni Problem 6 spring network';
             const modalContent = document.querySelector('.modal-content');
             if (modalContent.resetDragPosition) {
