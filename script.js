@@ -459,15 +459,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const formatHeadingForDisplay = (value = '') => {
         const str = String(value);
-        // Strip $...$ and common LaTeX wrappers, then map a few Greek symbols.
-        const withoutMathDelimiters = str.replace(/\$/g, '').replace(/[{}]/g, '');
+        // Strip $...$ and braces
+        let normalized = str.replace(/\$/g, '').replace(/[{}]/g, '');
         const greekMap = {
             '\\sigma': 'σ',
             '\\lambda': 'λ',
             '\\rho': 'ρ',
             '\\theta': 'θ'
         };
-        return withoutMathDelimiters.replace(/\\[a-zA-Z]+/g, (match) => greekMap[match] || match);
+        normalized = normalized.replace(/\\[a-zA-Z]+/g, (match) => greekMap[match] || match);
+
+        const subscriptMap = {
+            '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+            '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+            'r': 'ᵣ', 'x': 'ₓ', 'y': 'ᵧ', 'z': '𝓏', 'n': 'ₙ'
+        };
+        const toSubscripts = (text) => text.split('').map(ch => subscriptMap[ch] || ch).join('');
+
+        normalized = normalized.replace(/([A-Za-z])_([A-Za-z0-9]+)/g, (_, base, sub) => `${base}${toSubscripts(sub)}`);
+        return normalized;
     };
 
     const formatEngineeringNotationForLatex = (value, precision = 3, wrapInMathMode = true) => {
