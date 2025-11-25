@@ -612,6 +612,29 @@ tbody tr:nth-child(even) td {
     overflow-y: auto;
 }
 
+.markdown-preview {
+    max-height: 70vh;
+    overflow: auto;
+}
+
+.markdown-preview img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1rem 0;
+}
+
+.markdown-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5rem 0;
+}
+
+.markdown-table td {
+    border: 1px solid #ccc;
+    padding: 0.25rem 0.5rem;
+}
+
 .modal-close-btn {
     color: #aaa;
     position: absolute;
