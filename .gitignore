@@ -2,6 +2,6 @@
 *.png
 !images/example_1_1.png
 !images/example_1_2.png
+!images/problem_6.png
 *.txt
 *.pdf
-
