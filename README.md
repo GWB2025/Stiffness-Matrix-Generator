@@ -8,6 +8,11 @@ A web-based tool for generating and analysing 1D stiffness matrices for systems 
 
 Click the **Launch Browser App** badge above to open the live GitHub Pages build in your browser. No install or server is needed for the hosted version. If you run the app locally with `python -m server.py`, your browser may warn about the bundled self-signed certificate—proceed past the warning for local development, or use the hosted link to avoid it.
 
+## Quick Start
+
+1) **Hosted**: Click the badge to open the GitHub Pages build. Pick an analysis mode, set node count, add elements, then generate/invert the matrix and calculate displacements/reactions. Load a preset (Examples 1.1, 1.2, or Problem 6) for a ready-made setup.  
+2) **Local**: Run `python -m server.py` and open the printed `https://127.0.0.1:5001` URL. Bypass the self-signed cert warning. Workflow is identical to hosted, and local state persists in your browser storage.
+
 ## Key Features
 
 *   **Dual Analysis Modes**: Structural (axial springs/bars) and steady-state thermal conduction. Labels, units, solvers, and LaTeX exports adapt to the selected discipline.
