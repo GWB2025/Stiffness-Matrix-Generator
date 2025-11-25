@@ -569,13 +569,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const promptWithHtml = (html, title = "HTML") => {
         const plain = html.replace(/<br\s*\/?>/gi, '\n');
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(html).catch(() => {}).finally(() => {
-                prompt(`Here is the ${title}. It has been copied to your clipboard when possible:`, plain);
+        const fallbackPrompt = () => prompt(`Copy the ${title} below:`, plain);
+        const clipboard = navigator.clipboard;
+
+        // Prefer rich clipboard if supported
+        if (clipboard && window.ClipboardItem) {
+            const data = {
+                'text/html': new Blob([html], { type: 'text/html' }),
+                'text/plain': new Blob([plain], { type: 'text/plain' })
+            };
+            clipboard.write([new ClipboardItem(data)]).catch(() => {
+                // Try plain text as fallback
+                if (clipboard.writeText) {
+                    clipboard.writeText(html).catch(fallbackPrompt);
+                } else {
+                    fallbackPrompt();
+                }
             });
-        } else {
-            prompt(`Copy the ${title} below:`, plain);
+            return;
         }
+
+        // Plain text clipboard fallback
+        if (clipboard && clipboard.writeText) {
+            clipboard.writeText(html).catch(fallbackPrompt);
+            return;
+        }
+
+        // Last resort prompt
+        fallbackPrompt();
     };
 
     const translateMathText = (text) => {
