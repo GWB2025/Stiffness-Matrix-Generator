@@ -566,15 +566,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return exponent !== 0 ? `${formattedValue} x 10^${exponent}` : `${formattedValue}`;
     };
 
-    const escapeHtml = (str) => {
-        if (typeof str !== 'string') return '';
-        return str.replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    };
-
     // Minimal Markdown renderer for predictable summary content
     const renderMarkdownSubset = (markdown) => {
         if (!markdown) return '';
