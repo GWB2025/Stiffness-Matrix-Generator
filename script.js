@@ -53,6 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const kTitleElement = document.getElementById('k-title');
     const invKTitleElement = document.getElementById('inv-k-title');
     const INVERSE_HEADING_HTML = 'Inverse of Reduced Matrix (K<sub>r</sub><sup>-1</sup>)';
+    const previewMarkdownBtn = document.getElementById('preview-markdown-btn');
+    const markdownPreviewModal = document.getElementById('markdown-preview-modal');
+    const markdownPreviewContainer = document.getElementById('markdown-preview-container');
 
     const CalculationsModule = window.Calculations;
     if (!CalculationsModule) {
@@ -561,6 +564,88 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!Number.isFinite(value)) return '---';
         const { value: formattedValue, exponent } = formatEngineeringNotation(value, decimalPlaces);
         return exponent !== 0 ? `${formattedValue} x 10^${exponent}` : `${formattedValue}`;
+    };
+
+    const escapeHtml = (str) => {
+        if (typeof str !== 'string') return '';
+        return str.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+
+    // Minimal Markdown renderer for predictable summary content
+    const renderMarkdownSubset = (markdown) => {
+        if (!markdown) return '';
+        const lines = markdown.split('\n');
+        const htmlLines = [];
+        let inList = false;
+        let inTable = false;
+
+        const flushList = () => {
+            if (inList) {
+                htmlLines.push('</ul>');
+                inList = false;
+            }
+        };
+
+        const flushTable = () => {
+            if (inTable) {
+                htmlLines.push('</tbody></table>');
+                inTable = false;
+            }
+        };
+
+        const renderInline = (text) => {
+            if (!text) return '';
+            let out = escapeHtml(text);
+            // inline code
+            out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+            // bold then italic
+            out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            return out;
+        };
+
+        lines.forEach(rawLine => {
+            const line = rawLine.trimEnd();
+            if (line.startsWith('# ')) {
+                flushList(); flushTable();
+                htmlLines.push(`<h1>${renderInline(line.slice(2).trim())}</h1>`);
+            } else if (line.startsWith('## ')) {
+                flushList(); flushTable();
+                htmlLines.push(`<h2>${renderInline(line.slice(3).trim())}</h2>`);
+            } else if (line.startsWith('- ')) {
+                flushTable();
+                if (!inList) {
+                    htmlLines.push('<ul>');
+                    inList = true;
+                }
+                htmlLines.push(`<li>${renderInline(line.slice(2).trim())}</li>`);
+            } else if (line.startsWith('|')) {
+                flushList();
+                const cells = line.split('|').slice(1, -1).map(c => renderInline(c.trim()));
+                if (!inTable) {
+                    htmlLines.push('<table class="markdown-table"><tbody>');
+                    inTable = true;
+                }
+                // detect header separator
+                const isSeparator = cells.every(c => /^-+$/.test(c.replace(/<[^>]+>/g, '')));
+                if (!isSeparator) {
+                    htmlLines.push('<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>');
+                }
+            } else if (line === '') {
+                flushList(); flushTable();
+                htmlLines.push('<p></p>');
+            } else {
+                flushList(); flushTable();
+                htmlLines.push(`<p>${renderInline(line)}</p>`);
+            }
+        });
+
+        flushList(); flushTable();
+        return htmlLines.join('\n');
     };
 
     const wrapLabel = (text, maxLen = 18) => {
@@ -2617,6 +2702,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lines.push('_Tip: Paste this into a Markdown viewer or the course forum. For LaTeX, use the existing Summary (LaTeX) button._');
 
         promptWithText(lines.join('\n'), "Markdown Analysis Summary");
+        return lines.join('\n');
     };
 
     const generateSummaryBtn = document.getElementById('generate-summary-btn');
@@ -2627,6 +2713,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateMarkdownSummaryBtn = document.getElementById('generate-markdown-btn');
     if (generateMarkdownSummaryBtn) {
         generateMarkdownSummaryBtn.addEventListener('click', generateMarkdownSummary);
+    }
+
+    if (previewMarkdownBtn && markdownPreviewModal && markdownPreviewContainer) {
+        const closeBtn = markdownPreviewModal.querySelector('.modal-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                markdownPreviewModal.style.display = 'none';
+            });
+        }
+
+        previewMarkdownBtn.addEventListener('click', () => {
+            const markdown = generateMarkdownSummary();
+            const rendered = renderMarkdownSubset(markdown);
+            markdownPreviewContainer.innerHTML = rendered;
+            markdownPreviewModal.style.display = 'flex';
+            const modalContent = markdownPreviewModal.querySelector('.modal-content');
+            if (modalContent && modalContent.resetDragPosition) {
+                modalContent.resetDragPosition();
+            }
+        });
     }
 
 

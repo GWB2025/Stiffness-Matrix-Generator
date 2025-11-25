@@ -88,6 +88,7 @@
                 <button id="calculate-element-forces-btn" class="btn btn--gold" title="Calculate the internal force within each element.">Calculate Element Forces</button>
                 <button id="generate-summary-btn" class="btn btn-summary" title="Generate a LaTeX snippet summarising the entire analysis.">Summary</button>
                 <button id="generate-markdown-btn" class="btn btn-summary" title="Generate a Markdown summary for quick sharing in forums.">Markdown Summary</button>
+                <button id="preview-markdown-btn" class="btn btn--muted" title="Preview the Markdown summary in the browser.">Preview Markdown</button>
             </div>
             <div class="preset-accordion">
                 <details>
@@ -174,6 +175,14 @@
             <span class="modal-close-btn">&times;</span>
             <h2>System Diagram</h2>
             <div id="diagram-container"></div>
+        </div>
+    </div>
+
+    <div id="markdown-preview-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close-btn">&times;</span>
+            <h2>Markdown Summary Preview</h2>
+            <div id="markdown-preview-container" class="markdown-preview"></div>
         </div>
     </div>
 </body>
