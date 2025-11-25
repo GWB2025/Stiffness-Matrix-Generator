@@ -547,6 +547,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const promptWithText = (text, title = "Text") => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).catch(() => {}).finally(() => {
+                prompt(`Here is the ${title}. It has been copied to your clipboard when possible:`, text);
+            });
+        } else {
+            prompt(`Copy the ${title} below:`, text);
+        }
+    };
+
+    const formatEngineeringForText = (value, decimalPlaces) => {
+        if (!Number.isFinite(value)) return '---';
+        const { value: formattedValue, exponent } = formatEngineeringNotation(value, decimalPlaces);
+        return exponent !== 0 ? `${formattedValue} x 10^${exponent}` : `${formattedValue}`;
+    };
+
     const wrapLabel = (text, maxLen = 18) => {
         if (!text) return [];
         const words = text.split(/\s+/);
@@ -2467,9 +2483,150 @@ document.addEventListener('DOMContentLoaded', () => {
         promptWithLatex(summary, "LaTeX Analysis Summary");
     };
 
+    const generateMarkdownSummary = () => {
+        const btn = document.getElementById('generate-markdown-btn');
+        if (btn) {
+            btn.classList.add('is-flashing');
+            setTimeout(() => btn.classList.remove('is-flashing'), 500);
+        }
+
+        const modeConfig = getModeConfig();
+        const parsedDecimalPlaces = parseInt(decimalPlacesInput.value, 10);
+        const decimalPlaces = Number.isFinite(parsedDecimalPlaces) ? parsedDecimalPlaces : 4;
+        const nodeCount = parseInt(numNodesInput.value, 10) || 0;
+        const bulkPropertyValue = youngsModulusInput ? parseFloat(youngsModulusInput.value) : NaN;
+        const globalMultiplierValue = parseFloat(globalMultiplierInput.value);
+        const timestamp = new Date();
+        const timestampDisplay = timestamp.toISOString().replace(/T/, ' ').replace(/Z$/, ' UTC');
+
+        const elementsData = Array.from(elementsContainer.querySelectorAll('.element-row')).map((row, index) => {
+            const labelValue = row.querySelector('.element-label-input').value.trim();
+            return {
+                label: labelValue || `Element ${index + 1}`,
+                node1: parseInt(row.querySelector('.node1').value, 10),
+                node2: parseInt(row.querySelector('.node2').value, 10),
+                area: parseFloat(row.querySelector('.area-input').value),
+                length: parseFloat(row.querySelector('.length-input').value),
+                stiffness: parseFloat(row.querySelector('.stiffness-input').value),
+                calculateK: row.querySelector('.calculate-k-checkbox')?.checked || false
+            };
+        });
+
+        const fixedNodes = Array.from(fixedNodesContainer.querySelectorAll('input:checked')).map(cb => cb.id.split('-')[2]);
+        const nodalLoads = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
+        const appliedLoads = nodalLoads.map((value, index) => ({ node: index + 1, value })).filter(item => item.value !== 0);
+        const totalAppliedLoad = appliedLoads.length ? appliedLoads.reduce((sum, item) => sum + item.value, 0) : null;
+        const totalAbsLoad = appliedLoads.length ? appliedLoads.reduce((sum, item) => sum + Math.abs(item.value), 0) : null;
+
+        const computedOutputs = [];
+        if (matrixForExport.K) computedOutputs.push('K (global)');
+        if (matrixForExport.invK) computedOutputs.push('K_r^-1 (inverse reduced)');
+        if (fullDisplacementVector && fullDisplacementVector.length > 0) computedOutputs.push('d (displacements/temperatures)');
+        if (reactionForcesResult && reactionForcesResult.length > 0) computedOutputs.push('R (reactions)');
+        if (elementForcesResult && elementForcesResult.length > 0) computedOutputs.push('Element forces');
+        if (elementStressesResult && elementStressesResult.length > 0) computedOutputs.push('Element stresses/flux');
+
+        const presetNotes = [];
+        if (activePresetIllustrations.has('example11') && exampleScenarios.moaveniExample11?.metadata) {
+            const meta = exampleScenarios.moaveniExample11.metadata;
+            presetNotes.push(`Preset: Moaveni Example 1.1 (${meta.unitSystem || 'imperial lb-in'})`);
+        }
+        if (activePresetIllustrations.has('example24')) {
+            presetNotes.push('Preset: Moaveni Example 1.2 (thermal wall, imperial)');
+        }
+        if (activePresetIllustrations.has('problem6') && moaveniProblem6?.metadata) {
+            const meta = moaveniProblem6.metadata;
+            presetNotes.push(`Preset: ${meta.source || 'Moaveni Problem 6'}${meta.note ? ` — ${meta.note}` : ''}`);
+        }
+
+        const lines = [];
+        lines.push(`# ${modeConfig.displayName} Summary`);
+        lines.push('');
+        lines.push(`- Generated: ${timestampDisplay}`);
+        lines.push(`- Nodes: ${nodeCount}`);
+        lines.push(`- Global multiplier: ${Number.isFinite(globalMultiplierValue) ? globalMultiplierValue : '---'}`);
+        lines.push(`- Bulk property (${modeConfig.bulkPropertyLabel}): ${Number.isFinite(bulkPropertyValue) ? bulkPropertyValue : '---'}`);
+        lines.push(`- Fixed nodes: ${fixedNodes.length ? fixedNodes.join(', ') : 'None'}`);
+        lines.push(`- Applied loads: ${appliedLoads.length ? appliedLoads.map(l => `Node ${l.node} = ${formatEngineeringForText(l.value, decimalPlaces)}`).join('; ') : 'None'}`);
+        if (totalAppliedLoad !== null) {
+            lines.push(`- Total load (signed): ${formatEngineeringForText(totalAppliedLoad, decimalPlaces)}`);
+        }
+        if (totalAbsLoad !== null) {
+            lines.push(`- Total load (abs): ${formatEngineeringForText(totalAbsLoad, decimalPlaces)}`);
+        }
+        if (presetNotes.length) {
+            lines.push(`- Presets: ${presetNotes.join(' | ')}`);
+        }
+        lines.push('');
+        lines.push('## Elements');
+        if (elementsData.length) {
+            lines.push('| Element | n1 | n2 | Area | Length | Stiffness | Auto k |');
+            lines.push('| --- | --- | --- | --- | --- | --- | --- |');
+            elementsData.forEach(el => {
+                lines.push(`| ${el.label} | ${el.node1 || ''} | ${el.node2 || ''} | ${Number.isFinite(el.area) ? el.area : ''} | ${Number.isFinite(el.length) ? el.length : ''} | ${formatEngineeringForText(el.stiffness, decimalPlaces)} | ${el.calculateK ? 'yes' : 'no'} |`);
+            });
+        } else {
+            lines.push('No elements defined.');
+        }
+
+        lines.push('');
+        lines.push('## Computed Outputs');
+        lines.push(computedOutputs.length ? computedOutputs.map(item => `- ${item}`).join('\n') : '- None yet. Generate matrices and solve to populate results.');
+
+        if (fullDisplacementVector && fullDisplacementVector.length > 0) {
+            lines.push('');
+            lines.push('## Displacements / Temperatures');
+            lines.push('| Node | Value |');
+            lines.push('| --- | --- |');
+            fullDisplacementVector.forEach((val, idx) => {
+                lines.push(`| ${idx + 1} | ${formatEngineeringForText(val, decimalPlaces)} |`);
+            });
+        }
+
+        if (reactionForcesResult && reactionForcesResult.length > 0) {
+            lines.push('');
+            lines.push('## Reactions');
+            lines.push('| Node | Reaction |');
+            lines.push('| --- | --- |');
+            reactionForcesResult.forEach(item => {
+                lines.push(`| ${item.node} | ${formatEngineeringForText(item.force, decimalPlaces)} |`);
+            });
+        }
+
+        if (elementForcesResult && elementForcesResult.length > 0) {
+            lines.push('');
+            lines.push('## Element Forces');
+            lines.push('| Element | Force |');
+            lines.push('| --- | --- |');
+            elementForcesResult.forEach(item => {
+                lines.push(`| ${item.label} | ${formatEngineeringForText(item.force, decimalPlaces)} |`);
+            });
+        }
+
+        if (elementStressesResult && elementStressesResult.length > 0) {
+            lines.push('');
+            lines.push(`## ${modeConfig.elementFluxHeading || 'Element Stresses'}`);
+            lines.push('| Element | Value |');
+            lines.push('| --- | --- |');
+            elementStressesResult.forEach(item => {
+                lines.push(`| ${item.label} | ${formatEngineeringForText(item.stress, decimalPlaces)} |`);
+            });
+        }
+
+        lines.push('');
+        lines.push('_Tip: Paste this into a Markdown viewer or the course forum. For LaTeX, use the existing Summary (LaTeX) button._');
+
+        promptWithText(lines.join('\n'), "Markdown Analysis Summary");
+    };
+
     const generateSummaryBtn = document.getElementById('generate-summary-btn');
     if (generateSummaryBtn) {
         generateSummaryBtn.addEventListener('click', generateLatexSummary);
+    }
+
+    const generateMarkdownSummaryBtn = document.getElementById('generate-markdown-btn');
+    if (generateMarkdownSummaryBtn) {
+        generateMarkdownSummaryBtn.addEventListener('click', generateMarkdownSummary);
     }
 
 

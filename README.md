@@ -11,7 +11,8 @@ Click the **Launch Browser App** badge above to open the live GitHub Pages build
 ## Quick Start
 
 1) **Hosted**: Click the badge to open the GitHub Pages build. Pick an analysis mode, set node count, add elements, then generate/invert the matrix and calculate displacements/reactions. Load a preset (Examples 1.1, 1.2, or Problem 6) for a ready-made setup.  
-2) **Local**: Run `python -m server.py` and open the printed `https://127.0.0.1:5001` URL. Bypass the self-signed cert warning. Workflow is identical to hosted, and local state persists in your browser storage.
+2) **Local**: Run `python -m server.py` and open the printed `https://127.0.0.1:5001` URL. Bypass the self-signed cert warning. Workflow is identical to hosted, and local state persists in your browser storage.  
+3) **Share results**: Use `Summary` for LaTeX or `Markdown Summary` for forum-friendly output; JSON export/import helps move setups between machines.
 
 ## Key Features
 
@@ -20,7 +21,7 @@ Click the **Launch Browser App** badge above to open the live GitHub Pages build
 *   **Boundary Conditions & Loads**: Fix any node, enter prescribed displacements/temperatures, and apply nodal forces/heat loads. A global multiplier scales the assembled matrix when needed.
 *   **Computation Suite**: Builds the global matrix, forms and inverts the reduced matrix, then solves for displacements/temperatures, reaction forces, elemental forces, and stresses/heat flux.
 *   **Visual Aids**: A draggable system diagram renders the current model; a construction helper walks through how the global matrix is assembled.
-*   **Import/Export**: Save or load JSON states, export individual matrices to LaTeX, and generate a full LaTeX analysis summary (inputs, matrices, and results).
+*   **Import/Export**: Save or load JSON states, export individual matrices to LaTeX, generate a full LaTeX analysis summary, or grab a Markdown summary for quick forum posts.
 *   **Example Library**: One-click presets for Moaveni Example 1.1 (tapered bar), Moaveni Example 1.2 (thermal wall), and Moaveni Problem 6 (spring network).
 *   **Persistent State**: Your setup is stored in local storage so you can resume later.
 
@@ -64,7 +65,7 @@ The “Problem 6” preset sets up the six-spring network from Moaveni (2008): p
     *   `Calculate Displacements` (also computes reactions)
     *   `Calculate Stresses` / `Calculate Element Forces` (discipline-specific post-processing)
 6.  **Visualise**: Use the System Diagram button to view the layout and the Matrix Construction helper to see how `K` is assembled.
-7.  **Export**: Use `Summary` for a full LaTeX report, the `TeX` buttons on the matrix tables for quick snippets, or export/import JSON to share states.
+7.  **Export**: Use `Summary` for LaTeX, `Markdown Summary` for forum-friendly text, the `TeX` buttons on the matrix tables for quick snippets, or export/import JSON to share states.
 
 ## Run Locally
 
