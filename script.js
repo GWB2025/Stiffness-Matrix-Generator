@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addElementBtn = document.getElementById('add-element-btn');
     const loadExample11Btn = document.getElementById('load-example-1-1-btn');
     const loadExample4Btn = document.getElementById('load-example-4-btn');
+    const loadProblem6Btn = document.getElementById('load-problem-6-btn');
     const clearAppBtn = document.getElementById('clear-app-btn');
     const analysisModeSelect = document.getElementById('analysis-mode');
     const matrixContainer = document.getElementById('matrix-container');
@@ -307,6 +308,11 @@ document.addEventListener('DOMContentLoaded', () => {
             key: 'example11',
             src: 'images/example_1_1.png',
             caption: 'Moaveni Example 1.1 tapered bar (imperial)'
+        },
+        problem6: {
+            key: 'problem6',
+            src: 'images/problem_6.png',
+            caption: 'Moaveni Problem 6 spring network'
         }
     };
     const activePresetIllustrations = new Set();
@@ -1598,6 +1604,26 @@ document.addEventListener('DOMContentLoaded', () => {
             forces: [0, 0, 0, 0, 0, 0, 0]
         }
     };
+    const moaveniProblem6 = {
+        analysisMode: 'structural',
+        numNodes: 5,
+        globalMultiplier: 1,
+        decimalPlaces: 4,
+        elements: [
+            { node1: 1, node2: 2, stiffness: 5, area: 1, length: 1, label: 'k1 = 5 lb/in' },
+            { node1: 2, node2: 3, stiffness: 8, area: 1, length: 1, label: 'k2 = 8 lb/in' },
+            { node1: 2, node2: 3, stiffness: 5, area: 1, length: 1, label: 'k3 = 5 lb/in' },
+            { node1: 2, node2: 4, stiffness: 20, area: 1, length: 1, label: 'k4 = 20 lb/in' },
+            { node1: 3, node2: 4, stiffness: 10, area: 1, length: 1, label: 'k5 = 10 lb/in' },
+            { node1: 4, node2: 5, stiffness: 20, area: 1, length: 1, label: 'k6 = 20 lb/in' }
+        ],
+        fixedNodes: [true, false, false, false, true],
+        forces: [0, 10, 0, 10, 0],
+        metadata: {
+            source: 'Moaveni (2008) Problem 6',
+            note: 'Parallel springs between nodes 2-3; fixed ends at nodes 1 and 5; 10 lb applied at nodes 2 and 4.'
+        }
+    };
 
     // --- EVENT LISTENERS ---
 
@@ -1756,6 +1782,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             modal.style.display = 'flex';
             registerPresetIllustration('example24');
+        });
+    }
+
+    if (loadProblem6Btn) {
+        loadProblem6Btn.addEventListener('click', () => {
+            loadCustomExample(moaveniProblem6);
+            modalImg.src = 'images/problem_6.png';
+            modalImg.alt = 'Moaveni Problem 6 spring network';
+            const modalContent = document.querySelector('.modal-content');
+            if (modalContent.resetDragPosition) {
+                modalContent.resetDragPosition();
+            }
+            modal.style.display = 'flex';
+            registerPresetIllustration('problem6');
         });
     }
 
@@ -1986,6 +2026,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activePresetIllustrations.has('example24')) {
             requestedExampleFigures.push(presetIllustrationMetadata.example24);
         }
+        if (activePresetIllustrations.has('problem6')) {
+            requestedExampleFigures.push(presetIllustrationMetadata.problem6);
+        }
         const presetContextNotes = [];
         if (activePresetIllustrations.has('example11') && exampleScenarios.moaveniExample11?.metadata) {
             const meta = exampleScenarios.moaveniExample11.metadata;
@@ -1998,6 +2041,10 @@ document.addEventListener('DOMContentLoaded', () => {
             );
             presetContextNotes.push(`Material modulus $E = ${modulusText}\\,\\text{lb/in}^2$, tip load $P = ${tipLoadText}\\,\\text{lb}$.`);
             presetContextNotes.push(`Element areas [${areaListText}] $\\text{in}^2$; element stiffnesses [${stiffnessListText}] $\\text{lb/in}$.`);
+        }
+        if (activePresetIllustrations.has('problem6') && moaveniProblem6?.metadata) {
+            const meta = moaveniProblem6.metadata;
+            presetContextNotes.push(`${meta.source || 'Moaveni Problem 6'}: ${meta.note || ''}`);
         }
 
         const elementRows = elementsContainer.querySelectorAll('.element-row');
