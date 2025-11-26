@@ -658,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const altText = translateMathText(imageMatch[1] || '');
                 const src = imageMatch[2] || '';
                 flushList(); flushTable();
-                htmlLines.push(`<p><img src="${escapeHtml(src)}" alt="${escapeHtml(altText)}"></p>`);
+                htmlLines.push(`<p><img src="${escapeHtml(src)}" alt="${escapeHtml(altText)}" style="max-width:100%;height:auto;"></p>`);
                 return;
             }
             if (line.startsWith('# ')) {
