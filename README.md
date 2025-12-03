@@ -81,7 +81,17 @@ python -m server.py
 USE_TLS=1 python -m server.py
 ```
 
-The dev server runs over HTTPS with the bundled self-signed cert. Open the printed URL (https://127.0.0.1:5001), bypass the browser warning, and start working. The app is also published at the GitHub Pages link above if you prefer not to run it locally.
+The dev server now runs on HTTP by default. Set `USE_TLS=1` if you want HTTPS with your own self-signed certs. Open the printed URL (it defaults to `http://127.0.0.1:5001`, or another port if 5001 is taken) and work locally, or use the GitHub Pages link if you prefer not to run a server.
+
+**Optional: create self-signed certs for local HTTPS**
+
+If you want to test over HTTPS, generate a quick self-signed pair (no passphrase):
+
+```bash
+openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/C=US/ST=CA/L=Local/O=Dev/OU=Local/CN=127.0.0.1"
+```
+
+Then run `USE_TLS=1 python -m server.py` and open the printed `https://127.0.0.1:<port>` URL. Your browser will warn about the self-signed cert; that’s expected for local-only use.
 
 ## Technologies Used
 
