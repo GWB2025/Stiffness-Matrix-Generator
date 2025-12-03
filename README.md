@@ -6,12 +6,12 @@ A web-based tool for generating and analysing 1D stiffness matrices for systems 
 
 ## Launch from GitHub
 
-Click the **Launch Browser App** badge above to open the live GitHub Pages build in your browser. No install or server is needed for the hosted version. If you run the app locally with `python -m server.py`, your browser may warn about the bundled self-signed certificate—proceed past the warning for local development, or use the hosted link to avoid it.
+Click the **Launch Browser App** badge above to open the live GitHub Pages build in your browser. No install or server is needed for the hosted version. If you run the app locally with `python -m server.py`, it now defaults to plain HTTP; set `USE_TLS=1` if you want to serve over HTTPS with your own `cert.pem/key.pem`.
 
 ## Quick Start
 
 1) **Hosted**: Click the badge to open the GitHub Pages build. Pick an analysis mode, set node count, add elements, then generate/invert the matrix and calculate displacements/reactions. Load a preset (Examples 1.1, 1.2, Problem 6, or Kim & Sankar Problem 10) for a ready-made setup.  
-2) **Local**: Run `python -m server.py` and open the printed `https://127.0.0.1:5001` URL. Bypass the self-signed cert warning. Workflow is identical to hosted, and local state persists in your browser storage.  
+2) **Local**: Run `python -m server.py` and open the printed URL (typically `http://127.0.0.1:5001`; it will pick another port if 5001 is taken). Set `USE_TLS=1` to require `https://` with `cert.pem`/`key.pem`; otherwise it uses HTTP with no cert warnings. Workflow is identical to hosted, and local state persists in your browser storage.  
 3) **Share results**: Use `Summary` for LaTeX, `Markdown Summary` for forum-friendly output, or `HTML Summary` for TinyMCE/blog posts; JSON export/import helps move setups between machines.
 
 ## Key Features
@@ -74,7 +74,11 @@ The “Kim & Sankar Problem 10” preset mirrors the stepped bar in Figure 2.17 
 ## Run Locally
 
 ```bash
+# HTTP (default)
 python -m server.py
+
+# HTTPS (requires cert.pem/key.pem)
+USE_TLS=1 python -m server.py
 ```
 
 The dev server runs over HTTPS with the bundled self-signed cert. Open the printed URL (https://127.0.0.1:5001), bypass the browser warning, and start working. The app is also published at the GitHub Pages link above if you prefer not to run it locally.
