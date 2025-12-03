@@ -6,7 +6,7 @@ A web-based tool for generating and analysing 1D stiffness matrices for systems 
 
 ## Launch from GitHub
 
-Click the **Launch Browser App** badge above to open the live GitHub Pages build in your browser. No install or server is needed for the hosted version. If you run the app locally with `python -m server.py`, it now defaults to plain HTTP; set `USE_TLS=1` if you want to serve over HTTPS with your own `cert.pem/key.pem`.
+Click the **Launch Browser App** badge above to open the live GitHub Pages build in your browser. No installation or server is needed for the hosted version. If you run the app locally with `python -m server.py`, it now defaults to plain HTTP; set `USE_TLS=1` if you want to serve over HTTPS with your own `cert.pem/key.pem`.
 
 ## Quick Start
 
@@ -27,18 +27,17 @@ Click the **Launch Browser App** badge above to open the live GitHub Pages build
 
 ### Moaveni Example 1.1 Tapered Bar
 
-The “Example 1.1” preset mirrors the direct-formulation walk-through in Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008), Chapter 1 Example 1.1. Selecting it configures the tapered aluminum strip exactly as tabulated in the text:
+The “Example 1.1” preset mirrors the direct-formulation walk-through in Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008), Chapter 1 Example 1.1. Selecting it configures the tapered aluminium strip exactly as tabulated in the text:
 
 *   E = 10.4e6 lb/in^2, w1 = 2 in, w2 = 1 in, t = 0.125 in, and L = 10 in.
 *   Four 2.5 in elements are created with average areas [0.234375, 0.203125, 0.171875, 0.140625] in² and equivalent stiffnesses [9.75, 8.45, 7.15, 5.85] × 10⁵ lb/in.
 *   Node 1 is fixed, Node 5 carries the P = 1000 lb tip load, and all intermediate nodes are free.
 
-These inputs let you reproduce the published nodal displacements, reaction force, and element stresses for the tapered bar without re-entering the data by hand. The preset is a concise restatement of the Example 1.1 problem published in Saeed Moaveni’s *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008; Library of Congress TA347.F5 M62 2007, ISBN 0‑13‑189080‑8).
-The geometry and units are pulled directly from `Moaveni_Example_1_1_Imperial_Units_Summary.pdf` so the lb-in figures on screen match the supplied PDF scan.
+These inputs let you reproduce the published nodal displacements, reaction force, and element stresses for the tapered bar without re-entering the data by hand. The preset is a concise restatement of the Example 1.1 problem published in Saeed Moaveni’s *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008; Library of Congress TA347.F5 M62 2007, ISBN 0‑13‑189080‑8), with geometry and units matching the published figures.
 
 ### Moaveni Example 1.2 Thermal Wall
 
-The “Example 1.2” preset mirrors the thermal walk-through from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008): a 2×4 exterior wall with a 150 ft² exposed area, outside air at 20 °F, and an indoor temperature of 70 °F. The six layers listed in Moaveni’s imperial table are modeled as sequential thermal elements, each using the U-factor derived directly from the listed resistances (hr·ft²·°F/Btu → Btu/hr·ft²·°F) so the nodal temperatures (20.59, 23.41, 27.97, 66.08, 67.64 °F) and 520 Btu/hr heat loss match the worked example:
+The “Example 1.2” preset mirrors the thermal walk-through from Saeed Moaveni, *Finite Element Analysis: Theory and Application with ANSYS* (3rd ed., Pearson, 2008): a 2×4 exterior wall with a 150 ft² exposed area, outside air at 20 °F, and an indoor temperature of 70 °F. The six layers listed in Moaveni’s imperial table are modelled as sequential thermal elements, each using the U-factor derived directly from the listed resistances (hr·ft²·°F/Btu → Btu/hr·ft²·°F) so the nodal temperatures (20.59, 23.41, 27.97, 66.08, 67.64 °F) and 520 Btu/hr heat loss match the worked example:
 
 *   Outside film (winter, 15 mph), U = 5.88
 *   Wood siding (1/2 in. lapped), U = 1.23
