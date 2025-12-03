@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadExample11Btn = document.getElementById('load-example-1-1-btn');
     const loadExample4Btn = document.getElementById('load-example-4-btn');
     const loadProblem6Btn = document.getElementById('load-problem-6-btn');
+    const loadKimSankar10Btn = document.getElementById('load-kim-sankar-10-btn');
     const clearAppBtn = document.getElementById('clear-app-btn');
     const analysisModeSelect = document.getElementById('analysis-mode');
     const matrixContainer = document.getElementById('matrix-container');
@@ -318,6 +319,11 @@ document.addEventListener('DOMContentLoaded', () => {
             key: 'problem6',
             src: 'images/problem_6.png',
             caption: 'Moaveni Problem 6 spring network'
+        },
+        kimSankar10: {
+            key: 'kimSankar10',
+            src: 'images/kim_and_sankar_problem_10.png',
+            caption: 'Kim & Sankar Problem 10 stepped bar (Fig. 2.17)'
         }
     };
     const activePresetIllustrations = new Set();
@@ -1771,6 +1777,39 @@ document.addEventListener('DOMContentLoaded', () => {
             note: 'Parallel springs between nodes 2-3; fixed ends at nodes 1 and 5; 10 lb applied at nodes 2 and 4.'
         }
     };
+    const kimAndSankarProblem10 = (() => {
+        const E = 100e9; // Pa
+        const endArea = 1e-4; // m^2
+        const midArea = 2e-4; // m^2
+        const endLength = 0.3; // m
+        const midHalfLength = 0.2; // m (splitting the 0.4 m centre span at the force)
+        const endStiffness = (E * endArea) / endLength;
+        const midStiffness = (E * midArea) / midHalfLength;
+        return {
+            analysisMode: 'structural',
+            numNodes: 5,
+            globalMultiplier: 1,
+            decimalPlaces: 4,
+            youngsModulus: E,
+            elements: [
+                { node1: 1, node2: 2, stiffness: endStiffness, area: endArea, length: endLength, label: 'k1 (A=1e-4, L=0.3 m)' },
+                { node1: 2, node2: 3, stiffness: midStiffness, area: midArea, length: midHalfLength, label: 'k2 (A=2e-4, L=0.2 m)' },
+                { node1: 3, node2: 4, stiffness: midStiffness, area: midArea, length: midHalfLength, label: 'k3 (A=2e-4, L=0.2 m)' },
+                { node1: 4, node2: 5, stiffness: endStiffness, area: endArea, length: endLength, label: 'k4 (A=1e-4, L=0.3 m)' }
+            ],
+            fixedNodes: [true, false, false, false, true],
+            forces: [0, 0, 10000, 0, 0],
+            metadata: {
+                source: 'Kim & Sankar Problem 10 (Fig. 2.17)',
+                modulus: E,
+                appliedLoad: 10000,
+                endArea,
+                midArea,
+                segmentLengths: [endLength, midHalfLength, midHalfLength, endLength],
+                note: 'Stepped bar fixed at both ends; 10 kN applied at mid-node.'
+            }
+        };
+    })();
 
     // --- EVENT LISTENERS ---
 
@@ -1943,6 +1982,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             modal.style.display = 'flex';
             registerPresetIllustration('problem6');
+        });
+    }
+
+    if (loadKimSankar10Btn) {
+        loadKimSankar10Btn.addEventListener('click', () => {
+            loadCustomExample(kimAndSankarProblem10);
+            modalImg.src = 'images/kim_and_sankar_problem_10.png';
+            modalImg.alt = 'Kim & Sankar Problem 10 stepped bar (Fig. 2.17)';
+            const modalContent = document.querySelector('.modal-content');
+            if (modalContent.resetDragPosition) {
+                modalContent.resetDragPosition();
+            }
+            modal.style.display = 'flex';
+            registerPresetIllustration('kimSankar10');
         });
     }
 
@@ -2176,6 +2229,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activePresetIllustrations.has('problem6')) {
             requestedExampleFigures.push(presetIllustrationMetadata.problem6);
         }
+        if (activePresetIllustrations.has('kimSankar10')) {
+            requestedExampleFigures.push(presetIllustrationMetadata.kimSankar10);
+        }
         const presetContextNotes = [];
         if (activePresetIllustrations.has('example11') && exampleScenarios.moaveniExample11?.metadata) {
             const meta = exampleScenarios.moaveniExample11.metadata;
@@ -2192,6 +2248,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activePresetIllustrations.has('problem6') && moaveniProblem6?.metadata) {
             const meta = moaveniProblem6.metadata;
             presetContextNotes.push(`${meta.source || 'Moaveni Problem 6'}: ${meta.note || ''}`);
+        }
+        if (activePresetIllustrations.has('kimSankar10') && kimAndSankarProblem10?.metadata) {
+            const meta = kimAndSankarProblem10.metadata;
+            const modulusText = formatEngineeringNotationForLatex(meta.modulus, decimalPlaces, false);
+            const loadText = formatEngineeringNotationForLatex(meta.appliedLoad, decimalPlaces, false);
+            const endAreaText = formatEngineeringNotationForLatex(meta.endArea, decimalPlaces, false);
+            const midAreaText = formatEngineeringNotationForLatex(meta.midArea, decimalPlaces, false);
+            const lengthsText = Array.isArray(meta.segmentLengths)
+                ? meta.segmentLengths.map(len => formatEngineeringNotationForLatex(len, decimalPlaces, false)).join(', ')
+                : '';
+            presetContextNotes.push(`${meta.source || 'Kim & Sankar Problem 10'} (Fig. 2.17): ${meta.note || 'stepped bar with mid-span load.'}`);
+            presetContextNotes.push(`Segment lengths [${lengthsText}] m; end areas ${endAreaText} m^2, mid areas ${midAreaText} m^2; modulus $E = ${modulusText}\\,\\text{Pa}$; applied load = ${loadText}\\,\\text{N}.`);
         }
 
         const elementRows = elementsContainer.querySelectorAll('.element-row');
@@ -2671,6 +2739,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const meta = moaveniProblem6.metadata;
             presetNotes.push(`Preset: ${meta.source || 'Moaveni Problem 6'}${meta.note ? ` — ${meta.note}` : ''}`);
             presetFigures.push(presetIllustrationMetadata.problem6);
+        }
+        if (activePresetIllustrations.has('kimSankar10') && kimAndSankarProblem10?.metadata) {
+            const meta = kimAndSankarProblem10.metadata;
+            const lengthsText = Array.isArray(meta.segmentLengths) ? meta.segmentLengths.join(', ') : '';
+            presetNotes.push(`Preset: ${meta.source || 'Kim & Sankar Problem 10'}${meta.note ? ` — ${meta.note}` : ''}${lengthsText ? ` (L = [${lengthsText}] m)` : ''}`);
+            presetFigures.push(presetIllustrationMetadata.kimSankar10);
         }
 
         const lines = [];

@@ -10,7 +10,7 @@ Click the **Launch Browser App** badge above to open the live GitHub Pages build
 
 ## Quick Start
 
-1) **Hosted**: Click the badge to open the GitHub Pages build. Pick an analysis mode, set node count, add elements, then generate/invert the matrix and calculate displacements/reactions. Load a preset (Examples 1.1, 1.2, or Problem 6) for a ready-made setup.  
+1) **Hosted**: Click the badge to open the GitHub Pages build. Pick an analysis mode, set node count, add elements, then generate/invert the matrix and calculate displacements/reactions. Load a preset (Examples 1.1, 1.2, Problem 6, or Kim & Sankar Problem 10) for a ready-made setup.  
 2) **Local**: Run `python -m server.py` and open the printed `https://127.0.0.1:5001` URL. Bypass the self-signed cert warning. Workflow is identical to hosted, and local state persists in your browser storage.  
 3) **Share results**: Use `Summary` for LaTeX, `Markdown Summary` for forum-friendly output, or `HTML Summary` for TinyMCE/blog posts; JSON export/import helps move setups between machines.
 
@@ -22,7 +22,7 @@ Click the **Launch Browser App** badge above to open the live GitHub Pages build
 *   **Computation Suite**: Builds the global matrix, forms and inverts the reduced matrix, then solves for displacements/temperatures, reaction forces, elemental forces, and stresses/heat flux.
 *   **Visual Aids**: A draggable system diagram renders the current model; a construction helper walks through how the global matrix is assembled.
 *   **Import/Export**: Save or load JSON states, export individual matrices to LaTeX, generate a full LaTeX analysis summary, grab a Markdown summary for quick forum posts, or copy an HTML summary for WYSIWYG editors.
-*   **Example Library**: One-click presets for Moaveni Example 1.1 (tapered bar), Moaveni Example 1.2 (thermal wall), and Moaveni Problem 6 (spring network).
+*   **Example Library**: One-click presets for Moaveni Example 1.1 (tapered bar), Moaveni Example 1.2 (thermal wall), Moaveni Problem 6 (spring network), and Kim & Sankar Problem 10 (stepped bar).
 *   **Persistent State**: Your setup is stored in local storage so you can resume later.
 
 ### Moaveni Example 1.1 Tapered Bar
@@ -52,6 +52,10 @@ Loading the preset switches the app to thermal mode, fixes node 1 at 20 °F and 
 ### Moaveni Problem 6 Spring Network
 
 The “Problem 6” preset sets up the six-spring network from Moaveni (2008): parallel springs between nodes 2–3, fixed ends at nodes 1 and 5, and 10 lb loads at nodes 2 and 4. The preset matches the diagram in `images/problem_6.png` and preloads all element stiffnesses and boundary conditions so you can focus on the resulting displacements and reactions.
+
+### Kim & Sankar Problem 10 Stepped Bar
+
+The “Kim & Sankar Problem 10” preset mirrors the stepped bar in Figure 2.17 (five nodes, four elements). It fixes nodes 1 and 5, applies a 10 kN force at node 3, and uses $E = 100$ GPa with end areas of $1\\times10^{-4}\\ \\text{m}^2$, middle areas of $2\\times10^{-4}\\ \\text{m}^2$, and segment lengths of 0.3, 0.2, 0.2, and 0.3 m. Load it to jump straight into solving the reaction forces and segment stresses.
 
 ## How to Use
 
