@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportJsonBtn = document.getElementById('export-json-btn');
     const importJsonBtn = document.getElementById('import-json-btn');
     const importJsonInput = document.getElementById('import-json-input');
+    const exportAnsysBtn = document.getElementById('export-ansys-btn');
     const forcesTitleElement = document.getElementById('forces-title');
     const forcesDescriptionElement = document.getElementById('forces-description');
     const displacementsTitleElement = document.getElementById('displacements-title');
@@ -1123,6 +1124,220 @@ document.addEventListener('DOMContentLoaded', () => {
         URL.revokeObjectURL(url);
     };
 
+    const formatAnsysNumber = (value) => {
+        if (!Number.isFinite(value)) return '';
+        if (value === 0) return '0';
+        const abs = Math.abs(value);
+        if (abs >= 1e5 || abs < 1e-4) {
+            return value.toExponential(6);
+        }
+        return Number(value.toPrecision(8)).toString();
+    };
+
+    const computeNodePositions1D = (numNodes, elements) => {
+        const positions = Array(numNodes).fill(null);
+        positions[0] = 0;
+        const sanitized = elements.filter(el =>
+            Number.isInteger(el.node1) &&
+            Number.isInteger(el.node2) &&
+            el.node1 >= 1 &&
+            el.node2 >= 1 &&
+            el.node1 <= numNodes &&
+            el.node2 <= numNodes &&
+            el.node1 !== el.node2 &&
+            Number.isFinite(el.length) &&
+            el.length !== 0
+        );
+
+        let progress = true;
+        while (progress) {
+            progress = false;
+            sanitized.forEach(el => {
+                const len = Math.abs(el.length);
+                const idx1 = el.node1 - 1;
+                const idx2 = el.node2 - 1;
+                const sign = el.node2 >= el.node1 ? 1 : -1;
+                if (Number.isFinite(positions[idx1]) && positions[idx2] === null) {
+                    positions[idx2] = positions[idx1] + sign * len;
+                    progress = true;
+                } else if (Number.isFinite(positions[idx2]) && positions[idx1] === null) {
+                    positions[idx1] = positions[idx2] - sign * len;
+                    progress = true;
+                }
+            });
+        }
+
+        for (let i = 0; i < numNodes; i++) {
+            if (!Number.isFinite(positions[i])) {
+                positions[i] = i > 0 && Number.isFinite(positions[i - 1]) ? positions[i - 1] + 1 : 0;
+            }
+        }
+
+        return positions;
+    };
+
+    const buildAnsysInpContent = () => {
+        const numNodes = parseInt(numNodesInput.value, 10);
+        if (!Number.isInteger(numNodes) || numNodes < 2) {
+            alert('Please enter a valid number of nodes (between 2 and 10) before exporting.');
+            return null;
+        }
+
+        const elements = collectElementsData();
+        if (!elements.length) {
+            alert('Please add at least one element before exporting.');
+            return null;
+        }
+
+        const isStructural = analysisMode === 'structural';
+        const baseProperty = parseFloat(youngsModulusInput.value);
+        const globalMultiplier = parseFloat(globalMultiplierInput.value) || 1;
+        const effectiveProperty = Number.isFinite(baseProperty) ? baseProperty * globalMultiplier : null;
+        const nodePositions = computeNodePositions1D(numNodes, elements);
+        const fixedStates = collectFixedNodesData();
+        const forces = Array.from(forcesContainer.querySelectorAll('.force-item input')).map(input => parseFloat(input.value) || 0);
+
+        const realConstantMap = new Map();
+        const realConstants = [];
+        const elementSummaries = [];
+
+        elements.forEach((el, idx) => {
+            const lengthVal = Number.isFinite(el.length) && el.length !== 0 ? Math.abs(el.length) : 1;
+            const stiffnessVal = Number(el.stiffness);
+            const userArea = Number.isFinite(el.area) && el.area > 0 ? el.area : null;
+            const areaFromStiffness = (Number.isFinite(stiffnessVal) && Number.isFinite(baseProperty) && baseProperty !== 0)
+                ? (stiffnessVal * lengthVal) / baseProperty
+                : null;
+
+            let areaForAnsys = userArea;
+            let areaNote = '';
+            if (el.calculateK && userArea !== null) {
+                areaForAnsys = userArea;
+                areaNote = 'using input area (Calc k)';
+            } else if (areaFromStiffness && areaFromStiffness > 0) {
+                areaForAnsys = areaFromStiffness;
+                areaNote = 'equivalent area derived from stiffness';
+                if (userArea !== null && Math.abs(userArea - areaFromStiffness) / areaFromStiffness > 1e-6) {
+                    areaNote += `; requested area=${userArea}`;
+                }
+            } else {
+                areaForAnsys = userArea ?? 1;
+                areaNote = 'area defaulted (missing stiffness or property)';
+            }
+
+            const safeNode1 = Number.isInteger(el.node1) ? el.node1 : 1;
+            const safeNode2 = Number.isInteger(el.node2)
+                ? el.node2
+                : Math.min(numNodes, safeNode1 === numNodes ? numNodes - 1 : safeNode1 + 1);
+
+            const areaKey = Number.isFinite(areaForAnsys) ? areaForAnsys.toExponential(6) : `area-${idx}`;
+            let realId = realConstantMap.get(areaKey);
+            if (!realId) {
+                realId = realConstants.length + 1;
+                realConstantMap.set(areaKey, realId);
+                realConstants.push({ id: realId, area: areaForAnsys });
+            }
+
+            elementSummaries.push({
+                label: el.label || (isStructural ? `Element ${idx + 1}` : `Layer ${idx + 1}`),
+                node1: safeNode1,
+                node2: safeNode2,
+                realId,
+                areaNote
+            });
+        });
+
+        const lines = [];
+        const nowIso = new Date().toISOString();
+        lines.push('! Generated by Stiffness Matrix Generator');
+        lines.push(`! Mode: ${isStructural ? 'Structural' : 'Thermal'} | Timestamp: ${nowIso}`);
+        lines.push(`/title,Stiffness Matrix Export ${nowIso}`);
+        if (globalMultiplier !== 1) {
+            const multiplierTarget = isStructural ? 'modulus/conductivity' : 'conductivity';
+            lines.push(`! Global multiplier (${globalMultiplier}) has been applied to the ${multiplierTarget} so element stiffness matches the app.`);
+        }
+        lines.push('/prep7');
+        lines.push(`et,1,${isStructural ? 'link180' : 'link33'}`);
+        if (Number.isFinite(effectiveProperty)) {
+            if (isStructural) {
+                lines.push(`mp,ex,1,${formatAnsysNumber(effectiveProperty)}`);
+            } else {
+                lines.push(`mp,kxx,1,${formatAnsysNumber(effectiveProperty)}`);
+            }
+        } else {
+            lines.push(`! ${isStructural ? "Young's Modulus" : 'Thermal conductivity'} missing; defaulting to 1 to keep stiffness ratios consistent.`);
+            lines.push(isStructural ? 'mp,ex,1,1' : 'mp,kxx,1,1');
+        }
+
+        realConstants.forEach(rc => {
+            lines.push(`r,${rc.id},${formatAnsysNumber(rc.area)}`);
+        });
+
+        nodePositions.forEach((pos, idx) => {
+            lines.push(`n,${idx + 1},${formatAnsysNumber(pos)}`);
+        });
+
+        lines.push('type,1');
+        lines.push('mat,1');
+        elementSummaries.forEach(el => {
+            if (el.areaNote) {
+                lines.push(`! ${el.label}: ${el.areaNote}`);
+            }
+            lines.push(`real,${el.realId}`);
+            lines.push(`e,${el.node1},${el.node2} ${el.label ? `! ${el.label}` : ''}`);
+        });
+
+        fixedStates.forEach((state, idx) => {
+            if (!state || !state.fixed) return;
+            const value = parseFloat(state.value);
+            const disp = Number.isFinite(value) ? value : 0;
+            const dof = isStructural ? 'ux' : 'temp';
+            lines.push(`d,${idx + 1},${dof},${formatAnsysNumber(disp)}`);
+        });
+
+        forces.forEach((force, idx) => {
+            if (!force) return;
+            if (isStructural) {
+                lines.push(`f,${idx + 1},fx,${formatAnsysNumber(force)}`);
+            } else {
+                lines.push(`f,${idx + 1},hgen,${formatAnsysNumber(force)}`);
+            }
+        });
+
+        lines.push('finish');
+        lines.push('');
+        lines.push('/solu');
+        lines.push(isStructural ? 'antype,static' : 'antype,static');
+        lines.push('solve');
+        lines.push('finish');
+        lines.push('');
+        lines.push('/post1');
+        lines.push('set,last');
+        lines.push(isStructural ? 'prnsol,u' : 'prnsol,temp');
+        lines.push('prrsol');
+        lines.push(isStructural ? 'etable,ax,smisc,1' : 'etable,heatflow,smisc,1');
+        lines.push(isStructural ? 'pretab,ax' : 'pretab,heatflow');
+        lines.push('finish');
+        lines.push('');
+
+        return lines.join('\n');
+    };
+
+    const downloadAnsysInp = () => {
+        const content = buildAnsysInpContent();
+        if (!content) return;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `stiffness-matrix-${timestamp}.inp`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     const importStateFromContent = (content) => {
         try {
             const parsed = JSON.parse(content);
@@ -1421,7 +1636,8 @@ document.addEventListener('DOMContentLoaded', () => {
             node2: parseInt(row.querySelector('.node2').value, 10),
             stiffness: parseFloat(row.querySelector('.stiffness-input').value),
             area: parseFloat(row.querySelector('.area-input').value),
-            length: parseFloat(row.querySelector('.length-input').value)
+            length: parseFloat(row.querySelector('.length-input').value),
+            calculateK: row.querySelector('.calculate-k-checkbox')?.checked || false
         }));
     };
 
@@ -1847,6 +2063,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (exportJsonBtn) {
         exportJsonBtn.addEventListener('click', exportStateAsJson);
+    }
+
+    if (exportAnsysBtn) {
+        exportAnsysBtn.addEventListener('click', downloadAnsysInp);
     }
 
     if (importJsonBtn && importJsonInput) {

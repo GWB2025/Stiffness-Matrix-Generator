@@ -12,7 +12,7 @@ Click the **Launch Browser App** badge above to open the live GitHub Pages build
 
 1) **Hosted**: Click the badge to open the GitHub Pages build. Pick an analysis mode, set node count, add elements, then generate/invert the matrix and calculate displacements/reactions. Load a preset (Examples 1.1, 1.2, Problem 6, or Kim & Sankar Problem 10) for a ready-made setup.  
 2) **Local**: Run `python -m server.py` and open the printed URL (typically `http://127.0.0.1:5001`; it will pick another port if 5001 is taken). Set `USE_TLS=1` to require `https://` with `cert.pem`/`key.pem`; otherwise it uses HTTP with no cert warnings. Workflow is identical to hosted, and local state persists in your browser storage.  
-3) **Share results**: Use `Summary` for LaTeX, `Markdown Summary` for forum-friendly output, or `HTML Summary` for TinyMCE/blog posts; JSON export/import helps move setups between machines.
+3) **Share results**: Use `Summary` for LaTeX, `Markdown Summary` for forum-friendly output, or `HTML Summary` for TinyMCE/blog posts; JSON export/import helps move setups between machines. Use **Download ANSYS .inp** to produce an APDL deck (LINK180 for structural, LINK33 for thermal) that mirrors the current setup for ANSYS 2021R2+.
 
 ## Key Features
 
@@ -91,6 +91,22 @@ openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -node
 ```
 
 Then run `USE_TLS=1 python -m server.py` and open the printed `https://127.0.0.1:<port>` URL. Your browser will warn about the self-signed cert; that’s expected for local-only use.
+
+## ANSYS export (structural and thermal)
+
+- Click **Download ANSYS .inp** (in the Analysis Actions row) to export the current model. Structural mode emits LINK180 with `EX`; Thermal mode emits LINK33 with `KXX`. Fixed nodes become `D,UX` (structural) or `D,TEMP` (thermal); nodal loads become `F,FX` or `F,HGEN` respectively. Element table output is printed via `PRETAB`.
+- Example command (PowerShell) to solve and write `.out`:
+  ```powershell
+  cd "C:\path\to\Stiffness-Matrix-Generator"
+  & "C:\Program Files\Ansys\v212\ansys\bin\winx64\ansys212.exe" `
+    -np 1 `
+    -dir "$PWD" `
+    -j smg `
+    -b `
+    -i "model.inp" `
+    -o "model.out"
+  ```
+  Replace the executable path if ANSYS is elsewhere. `-np 1` avoids MPI startup issues; `-dir` keeps scratch in the working folder. On cmd.exe, use carets (`^`) for line continuations or place the flags on one line.
 
 ## Technologies Used
 

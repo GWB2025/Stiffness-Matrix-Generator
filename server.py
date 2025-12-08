@@ -12,11 +12,14 @@ USE_TLS = os.getenv("USE_TLS", "").lower() in ("1", "true", "yes")
 CERT_PATH = "cert.pem"
 KEY_PATH = "key.pem"
 
+
 class ReusableTCPServer(socketserver.TCPServer):
     allow_reuse_address = True
 
+
 # Create a simple handler that serves files from the current directory
 Handler = http.server.SimpleHTTPRequestHandler
+
 
 def create_server():
     requested_port = PORT
@@ -48,22 +51,29 @@ def create_server():
 
     return httpd, protocol, actual_port
 
-try:
-    server, proto, bound_port = create_server()
-except OSError as err:
-    print(f"Failed to bind to {HOST}:{PORT} — {err}")
-    print("Try setting a different PORT env var (e.g., PORT=5002) or stop the process using the current port.")
-    raise SystemExit(1)
 
-with server:
-    protocol = proto if proto in ("http", "https") else "http"
-
-    print(f"Serving {protocol.upper()} on {protocol}://{HOST}:{bound_port}")
-    if protocol == "http":
-        print("Running without TLS. For HTTPS, set USE_TLS=1 and provide cert.pem/key.pem.")
-
+def main():
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nServer stopped.")
-        server.server_close()
+        server, proto, bound_port = create_server()
+    except OSError as err:
+        print(f"Failed to bind to {HOST}:{PORT} — {err}")
+        print("Try setting a different PORT env var (e.g., PORT=5002) or stop the process using the current port.")
+        return 1
+
+    with server:
+        protocol = proto if proto in ("http", "https") else "http"
+
+        print(f"Serving {protocol.upper()} on {protocol}://{HOST}:{bound_port}")
+        if protocol == "http":
+            print("Running without TLS. For HTTPS, set USE_TLS=1 and provide cert.pem/key.pem.")
+
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print("\nServer stopped.")
+            server.server_close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
